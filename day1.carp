@@ -1,0 +1,22 @@
+(load "Format.carp")
+
+(def in (IO.read-file "../input.1.txt"))
+(def ls (String.lines &in))
+(def ints (Array.copy-map &Int.from-string &ls))
+
+(defn sum []
+  (let [i 0
+        s 0]
+    (do
+      (while (Int.< i (Array.length &ints))
+        (let [val @(Array.nth &ints i)]
+          (do
+            (set! s (Int.+ s val))
+            (set! i (Int.+ i 1))
+            ;;(IO.println &(Int.format "%d" val))
+            ;;(IO.println &(Int.format "%d" s))
+            )))
+      (IO.println &(Int.format "%d" s)))))
+
+(defn main []
+  (sum))

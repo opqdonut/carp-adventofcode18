@@ -1,0 +1,4 @@
+#!/bin/sh
+CARP_DIR=$(readlink -f Carp)
+cd Carp
+stack exec carp $@
