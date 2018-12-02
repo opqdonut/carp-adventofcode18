@@ -1,0 +1,35 @@
+(load "Map.carp")
+
+(def in (IO.read-file "../input.2.txt"))
+(def lines (the (Array String) (Array.pop-back (String.lines &in))))
+
+(defn inc-in-map [m c-ref]
+  (if (Map.contains? &m c-ref)
+    (let [prev (Map.get &m c-ref)]
+      (Map.put m c-ref &(inc prev)))
+    (Map.put m c-ref &1)))
+
+(defn histogram [s-ref]
+  (let [chars (String.chars s-ref)]
+    (Array.reduce &inc-in-map (Map.create) &chars)))
+
+(defn occurs-exactly [target histogram-ref]
+  (let [ret false
+        f (fn [char count]
+            (if (= target @count)
+              (set! ret true)
+              ()))]
+    (do
+      (Map.for-each histogram-ref f)
+      ret)))
+
+(defn main []
+  (do
+    (let [f (Array.first &lines)
+          hist (histogram &f)]
+      (do
+        (IO.println &f)
+        (IO.println &(str &hist))
+        (IO.println &(str (occurs-exactly 2 &hist)))
+        (IO.println &(str (occurs-exactly 3 &hist)))))
+    0))
