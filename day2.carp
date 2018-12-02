@@ -39,7 +39,7 @@
         (IO.print "3"))
       (IO.println ""))))
 
-(defn main []
+(defn occurs-test-cases []
   (do
     (tst "bababc")
     (tst "bababbc")
@@ -51,13 +51,68 @@
     (tst "ax")
     (tst "axx")
     (tst "axxx")
-    (tst "axxxx")
-    (let [srt (Array.endo-map &Array.sort
-                              (Array.copy-map &String.chars &lines))
-          twos (count-predicate &(fn [x] (occurs-exactly 2 x)) &srt)
-          threes (count-predicate &(fn [x] (occurs-exactly 3 x)) &srt)]
-      (do
-        ;;(IO.println &(prn &srt))
-        (IO.println &(str twos))
-        (IO.println &(str threes))
-        (IO.println &(str (* twos threes)))))))
+    (tst "axxxx")))
+
+(defn part1 []
+  (let [srt (Array.endo-map &Array.sort
+                            (Array.copy-map &String.chars &lines))
+        twos (count-predicate &(fn [x] (occurs-exactly 2 x)) &srt)
+        threes (count-predicate &(fn [x] (occurs-exactly 3 x)) &srt)]
+    (do
+      ;;(IO.println &(prn &srt))
+      (IO.println &(str twos))
+      (IO.println &(str threes))
+      (IO.println &(str (* twos threes))))))
+
+(defn cmp [rcs rds]
+  (Array.zip &= rcs rds))
+
+(defn diff [rcs rds]
+  (Array.element-count &(cmp rcs rds)
+                       &false))
+
+(defn close [rcs rds]
+  (= 1 (diff rcs rds)))
+
+(defn diff-test-cases []
+  (let [tst (fn [x y]
+              (do
+                (IO.print x)
+                (IO.print " ")
+                (IO.print y)
+                (IO.print " ")
+                (IO.println &(str (diff &(String.chars x) &(String.chars y))))))]
+    (do
+      (tst "abcde" "axcye")
+      (tst "fghij" "fghuj"))))
+
+(defn select [xs bs]
+  (let [ret (Array.zero)]
+    (do
+      (for [i 0 (Array.length xs)]
+        (when @(Array.nth bs i)
+          (set! ret (Array.push-back ret @(Array.nth xs i)))))
+      ret)))
+
+(defn common [rcs rds]
+  (String.from-chars
+   &(select rcs
+            &(cmp rcs rds))))
+
+(defn find-it [css]
+  (let [len (Array.length css)]
+    (for [i 0 len]
+      (for [j (inc i) len]
+        (let [a (Array.nth css i)
+              b (Array.nth css j)]
+          (when (close a b)
+            (do
+              (IO.print &(prn a))
+              (IO.print " ")
+              (IO.println &(prn b))
+              (IO.println &(common a b)))))))))
+
+(defn main []
+  (do
+    (diff-test-cases)
+    (find-it &(Array.copy-map &String.chars &lines))))
