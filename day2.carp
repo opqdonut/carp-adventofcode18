@@ -3,33 +3,61 @@
 (def in (IO.read-file "../input.2.txt"))
 (def lines (the (Array String) (Array.pop-back (String.lines &in))))
 
-(defn inc-in-map [m c-ref]
-  (if (Map.contains? &m c-ref)
-    (let [prev (Map.get &m c-ref)]
-      (Map.put m c-ref &(inc prev)))
-    (Map.put m c-ref &1)))
-
-(defn histogram [s-ref]
-  (let [chars (String.chars s-ref)]
-    (Array.reduce &inc-in-map (Map.create) &chars)))
-
-(defn occurs-exactly [target histogram-ref]
-  (let [ret false
-        f (fn [char count]
-            (if (= target @count)
-              (set! ret true)
-              ()))]
+(defn occurs-exactly [target sorted-ref]
+  (let [c (Array.first sorted-ref)
+        len (Array.length sorted-ref)
+        cnt 0
+        i 0
+        success false]
     (do
-      (Map.for-each histogram-ref f)
-      ret)))
+      (while (< i len)
+        (do
+          (while (and (< i len)
+                      (= c @(Array.nth sorted-ref i)))
+            (do
+              (set! cnt (inc cnt))
+              (set! i (inc i))))
+          (when (= cnt target)
+            (set! success true))
+          (when (< i len)
+            (do
+              (set! cnt 0)
+              (set! c @(Array.nth sorted-ref i))))))
+      success)))
+
+(defn count-predicate [ref-pred ref-array]
+  (Array.length &(Array.filter ref-pred (copy ref-array))))
+
+(defn tst [s-ref]
+  (let [arr (Array.sort (String.chars s-ref))]
+    (do
+      (IO.print s-ref)
+      (IO.print " ")
+      (when (occurs-exactly 2 &arr)
+        (IO.print "2"))
+      (when (occurs-exactly 3 &arr)
+        (IO.print "3"))
+      (IO.println ""))))
 
 (defn main []
   (do
-    (let [f (Array.first &lines)
-          hist (histogram &f)]
+    (tst "bababc")
+    (tst "bababbc")
+    (tst "bbabbc")
+    (tst "axxxxx")
+    (tst "aaxxxxx")
+    (tst "aaaxxxxx")
+    (tst "aaaaxxxxx")
+    (tst "ax")
+    (tst "axx")
+    (tst "axxx")
+    (tst "axxxx")
+    (let [srt (Array.endo-map &Array.sort
+                              (Array.copy-map &String.chars &lines))
+          twos (count-predicate &(fn [x] (occurs-exactly 2 x)) &srt)
+          threes (count-predicate &(fn [x] (occurs-exactly 3 x)) &srt)]
       (do
-        (IO.println &f)
-        (IO.println &(str &hist))
-        (IO.println &(str (occurs-exactly 2 &hist)))
-        (IO.println &(str (occurs-exactly 3 &hist)))))
-    0))
+        ;;(IO.println &(prn &srt))
+        (IO.println &(str twos))
+        (IO.println &(str threes))
+        (IO.println &(str (* twos threes)))))))
