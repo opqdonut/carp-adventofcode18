@@ -1,8 +1,9 @@
 (load "Format.carp")
+(load "Map.carp")
 
 (def in (IO.read-file "../input.1.txt"))
-(def ls (String.lines &in))
-(def ints (Array.copy-map &Int.from-string &ls))
+(def ls (Array.pop-back (String.lines &in)))
+(def ints (the (Array int) (Array.copy-map &Int.from-string &ls)))
 
 (defn sum []
   (let [i 0
@@ -18,5 +19,41 @@
             )))
       (IO.println &(Int.format "%d" s)))))
 
+(defn reductions [f z ref-arr]
+  (let [i 0
+        v z
+        len (Array.length ref-arr)
+        out (Array.allocate len)]
+    (do
+      (while (Int.< i len)
+        (do
+          (set! v (f v (Array.nth ref-arr i)))
+          (Array.aset! &out i v)
+          (set! i (Int.inc i))))
+      out)))
+
+(defn +r [x y]
+  (Int.add-ref &x y))
+
+(defn duplicate-loop [ref-arr]
+  (let [m (the (Map Int Bool) (Map.create))
+        len (Array.length (the (Ref (Array Int)) ref-arr))
+        i 0
+        v (the Int @(Array.nth ref-arr i))]
+    (do
+      (while (not (Map.contains? &m &v))
+        (do
+          (set! m (Map.put m &v &true))
+          (set! i (Int.mod (inc i) len))
+          (set! v (+r v (Array.nth ref-arr i)))))
+      v)))
+
+(defn find-duplicate []
+  (duplicate-loop &ints))
+
 (defn main []
-  (sum))
+  (do
+    (IO.println &(prn &lines))
+    (IO.println &(prn &ints))
+    ;;(sum)
+    (IO.println &(prn (find-duplicate)))))
