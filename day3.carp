@@ -40,7 +40,7 @@
         old (if (Map.contains? &m &k)
               (Map.get &m &k)
               0)]
-    (Map.put m &k &(inc old))))
+    (Map.put (Map.remove m &k) &k &(inc old))))
 
 (defn incr-patch [m0 patch]
   (let [m m0]
@@ -50,13 +50,22 @@
           (set! m (incr m x y))))
       m)))
 
+(defn patch-area [patch]
+  (* @(Patch.w patch) @(Patch.h patch)))
+
+(defn total-area [parsed-ref]
+  (Array.sum &(Array.copy-map &patch-area parsed-ref)))
+
 (def part1-test-input
-  (Array.copy-map &parse &[@"#1 @ 1,3: 4x4"
+  (Array.copy-map &parse &[@"#1 @ 1,3: 5x4"
                            @"#2 @ 3,1: 4x4"
-                           @"#3 @ 5,5: 2x2"]))
+                           @"#3 @ 5,5: 2x2"
+                           @"#4 @ 5,5: 2x2"
+                           ]))
 
 (defn part1 [parsed-ref]
-  (let [final (Map.to-array &(Array.reduce &incr-patch (Map.create) parsed-ref))
+  (let [final (Map.to-array &(Array.reduce &incr-patch (Map.create-with-len 500000) parsed-ref))
+        ;;_ (IO.println &(prn &final))
         duplicates (Array.filter &(fn [p] (> @(Pair.b p) 1)) final)]
     (do (IO.println &(prn (Array.length &duplicates))))))
 
@@ -64,4 +73,8 @@
   (do
     (parse-int-tests)
     (parse-tests)
-    (part1 &part1-test-input)))
+    (part1 &part1-test-input)
+    (IO.println &(str &(Array.last &parsed)))
+    (IO.println &(prn (total-area &parsed))) ;;=>477380
+    (part1 &parsed) ;;=>139525 "too high"
+    ))
