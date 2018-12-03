@@ -1,0 +1,67 @@
+(def in (IO.read-file "../input.3.txt"))
+(def lines (the (Array String) (Array.pop-back (String.lines &in))))
+
+(deftype Patch [id Int
+                x Int
+                y Int
+                w Int
+                h Int])
+
+(defn parse-int [str-ref]
+  (let [clean (Pattern.substitute #"[^0-9]" str-ref "" -1)]
+    (Int.from-string &clean)))
+
+(defn parse-int-tests []
+  (let [tst (fn [x]
+              (do
+                (IO.print x)
+                (IO.print " ")
+                (IO.println &(prn (parse-int x)))))]
+    (do
+      (tst "#123 ")
+      (tst " ,61 "))))
+
+(defn parse [str-ref]
+  (let [parts &(String.split-by str-ref &[\@ \, \: \x])]
+    (Patch.init (parse-int (Array.nth parts 0))
+                (parse-int (Array.nth parts 1))
+                (parse-int (Array.nth parts 2))
+                (parse-int (Array.nth parts 3))
+                (parse-int (Array.nth parts 4)))))
+
+(defn parse-tests []
+  (do
+    (IO.println &(str &(parse "#100 @ 499,695: 24x28")))))
+
+(def parsed (Array.copy-map &parse &lines))
+
+(defn incr [m x y]
+  (let [k (+ (* 10000 x) y)
+        old (if (Map.contains? &m &k)
+              (Map.get &m &k)
+              0)]
+    (Map.put m &k &(inc old))))
+
+(defn incr-patch [m0 patch]
+  (let [m m0]
+    (do
+      (for [x @(Patch.x patch) (+ @(Patch.x patch) @(Patch.w patch))]
+        (for [y @(Patch.y patch) (+ @(Patch.y patch) @(Patch.h patch))]
+          (set! m (incr m x y))))
+      m)))
+
+(def part1-test-input
+  (Array.copy-map &parse &[@"#1 @ 1,3: 4x4"
+                           @"#2 @ 3,1: 4x4"
+                           @"#3 @ 5,5: 2x2"]))
+
+(defn part1 [parsed-ref]
+  (let [final (Map.to-array &(Array.reduce &incr-patch (Map.create) parsed-ref))
+        duplicates (Array.filter &(fn [p] (> @(Pair.b p) 1)) final)]
+    (do (IO.println &(prn (Array.length &duplicates))))))
+
+(defn main []
+  (do
+    (parse-int-tests)
+    (parse-tests)
+    (part1 &part1-test-input)))
