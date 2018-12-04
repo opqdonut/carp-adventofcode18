@@ -1,5 +1,5 @@
 (def in (IO.read-file "../input.4.sorted"))
-(def entries (Array.pop-back (String.lines &in)))
+(def in-lines (Array.pop-back (String.lines &in)))
 
 (deftype Entry [date String
                 guard Int
@@ -25,25 +25,81 @@
                   (parse-int (Array.nth parts 2))
                   sleep?))))
 
-(def parsed (Array.copy-map &parse &entries))
+(def entries (Array.copy-map &parse &in-lines))
 
-(defn sleep-totals []
-  (let [m (Map.create)
+(deftype Sleep [guard Int
+                duration Int
+                start-m Int
+                end-m Int])
+
+(defn entries->sleeps [entries]
+  (let [ret (Array.zero)
         cur -1
         start -1]
     (do
-      (foreach [e &parsed]
+      (foreach [e entries]
         (if (< 0 @(Entry.guard e))
           (set! cur @(Entry.guard e))
           (if @(Entry.sleep e)
             (set! start @(Entry.m e))
-            (let [diff (- @(Entry.m e) start)
-                  old (Map.get &m &cur)]
-              (set! m (Map.put m &cur &(+ old diff)))))))
+            (let [end @(Entry.m e)]
+              (Array.push-back! &ret (Sleep.init cur
+                                                 (- end start)
+                                                 start
+                                                 end))))))
+      ret)))
+
+(def sleeps (entries->sleeps &entries))
+
+(defn summarize-sleeps [sleeps]
+  (let [m (Map.create)]
+    (do
+      (foreach [s sleeps]
+        (let [key (Sleep.guard s)
+              old (if (Map.contains? &m key)
+                    (Map.get &m key)
+                    0)]
+          (set! m (Map.put m key &(+ old @(Sleep.duration s))))))
       m)))
 
+(def summary (summarize-sleeps &sleeps))
+
+(defn best-sleeper [summary]
+  (let [arr (Map.to-array summary)
+        guard -1
+        best -1]
+    (do
+      (foreach [p &arr]
+        (when (> @(Pair.b p) best)
+          (do
+            (set! guard @(Pair.a p))
+            (set! best @(Pair.b p)))))
+      guard)))
+
+(defn best-minute [guard sleeps]
+  (let [ss (Array.filter &(fn [s] (= guard @(Sleep.guard s))) @sleeps)
+        mins (Array.replicate 60 &0)]
+    (do
+      (foreach [s &ss]
+        (for [m @(Sleep.start-m s) @(Sleep.end-m s)]
+          (Array.aupdate! &mins m &(fn [i] (+ 1 @i)))))
+      (println* &mins)
+      (let [smallest (Array.maximum &mins)
+            ind (Array.index-of &mins smallest)]
+        (do
+          (println* ind)
+          ind)))))
+
+
 (defn part1 []
-  (println* &(sleep-totals)))
+  (do
+    (println* &summary)
+    (let [best (best-sleeper &summary)
+          minute (best-minute best &sleeps)]
+      (do
+        (println* best)
+        (println* minute)
+        (println* (* best minute))))))
 
 (defn main []
   (part1))
