@@ -1,0 +1,49 @@
+(def in (IO.read-file "../input.4.sorted"))
+(def entries (Array.pop-back (String.lines &in)))
+
+(deftype Entry [date String
+                guard Int
+                h Int
+                m Int
+                sleep Bool])
+
+(defn parse-int [str-ref]
+  (let [clean (Pattern.substitute #"[^0-9]" str-ref "" -1)]
+    (Int.from-string &clean)))
+
+(defn parse [s]
+  (let [parts &(String.split-by s &[\: \ ])
+        ;;_ (println* parts)
+        guard? (= "Guard" (Array.nth parts 3))
+        sleep? (= "falls" (Array.nth parts 3))]
+    (do
+      (Entry.init (String.tail (Array.nth parts 0))
+                  (if guard?
+                    (parse-int (Array.nth parts 4))
+                    -1)
+                  (parse-int (Array.nth parts 1))
+                  (parse-int (Array.nth parts 2))
+                  sleep?))))
+
+(def parsed (Array.copy-map &parse &entries))
+
+(defn sleep-totals []
+  (let [m (Map.create)
+        cur -1
+        start -1]
+    (do
+      (foreach [e &parsed]
+        (if (< 0 @(Entry.guard e))
+          (set! cur @(Entry.guard e))
+          (if @(Entry.sleep e)
+            (set! start @(Entry.m e))
+            (let [diff (- @(Entry.m e) start)
+                  old (Map.get &m &cur)]
+              (set! m (Map.put m &cur &(+ old diff)))))))
+      m)))
+
+(defn part1 []
+  (println* &(sleep-totals)))
+
+(defn main []
+  (part1))
