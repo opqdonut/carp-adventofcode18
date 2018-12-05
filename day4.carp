@@ -92,14 +92,12 @@
       (foreach [s &ss]
         (for [m @(Sleep.start-m s) @(Sleep.end-m s)]
           (Array.aupdate! &mins m &(fn [i] (+ 1 @i)))))
-      (println* &mins)
       (maximum-by compare-b
                   &(Array.enumerated &mins)))))
 
 
 (defn part1 []
   (do
-    (println* &summary)
     (let [best (best-sleeper &summary)
           minute @(Pair.a &(best-minute best &sleeps))]
       (do
@@ -107,5 +105,24 @@
         (println* minute)
         (println* (* best minute))))))
 
+(def all-guards
+  (Set.to-array
+   &(Set.from-array
+     &(Array.copy-map &(fn [g] @(Sleep.guard g)) &sleeps))))
+
+(defn part2 []
+  (let [bests-by-guard (Array.copy-map
+                        &(fn [g] (Pair.init @g (best-minute @g &sleeps)))
+                        &all-guards)
+        _ (println* &bests-by-guard)
+        best (maximum-by (fn [b1 b2] (compare-b (Pair.b b1) (Pair.b b2)))
+                         &bests-by-guard)
+        _ (println* &best)
+        result (* @(Pair.a &best) @(Pair.a (Pair.b &best)))]
+    (println* result)))
+
 (defn main []
-  (part1))
+  (do
+    (part1)
+    (println* ";;; PART 2 ;;;")
+    (part2)))
