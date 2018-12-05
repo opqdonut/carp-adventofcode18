@@ -1,0 +1,58 @@
+(def in (Array.pop-back (String.chars &(IO.read-file "../input.5.txt"))))
+
+(defn opposite? [c1 c2]
+  (let [i1 (Char.to-int c1)
+        i2 (Char.to-int c2)]
+    (= (Int.abs (- i1 i2))
+       32)))
+
+(defn test-opposite? []
+  (let [tst (fn [a b]
+              (do
+                (print* a)
+                (println* b)
+                (println* (opposite? a b))))]
+    (do
+      (tst \a \A)
+      (tst \A \a)
+      (tst \A \b)
+      (tst \a \B)
+      (tst \A \A)
+      (tst \a \a))))
+
+(defn apply [array char-ref]
+  (if (and (not (Array.empty? &array))
+           (opposite? (Array.last &array)
+                      @char-ref))
+    (Array.pop-back array)
+    (Array.push-back array @char-ref)))
+
+(defn reduce [input]
+  (Array.reduce &apply [] input))
+
+(defn test-reduce []
+  (println* &(reduce &(String.chars "dabAcCaCBAcCcaDA"))))
+
+(defn part1 []
+  (println* (Array.length &(reduce &in))))
+
+(def alphabet (String.chars "abcdefghijklmnopqrstuvwxyz"))
+
+(defn eliminate [bad input]
+  (Array.filter &(fn [c] (and (not (= bad c))
+                              (not (opposite? @bad @c))))
+                @input))
+
+(defn part2 []
+  (println*
+   (Array.minimum
+    &(Array.copy-map
+      &(fn [c] (Array.length &(reduce &(eliminate c &in))))
+      &alphabet))))
+
+(defn main []
+  (do
+    (test-opposite?)
+    (test-reduce)
+    (part1)
+    (part2)))
