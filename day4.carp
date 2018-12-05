@@ -51,30 +51,39 @@
 
 (def sleeps (entries->sleeps &entries))
 
-(defn summarize-sleeps [sleeps]
+(defn map-from-array-with [key-fn value-fn combine-fn values]
   (let [m (Map.create)]
     (do
-      (foreach [s sleeps]
-        (let [key (Sleep.guard s)
-              old (if (Map.contains? &m key)
-                    (Map.get &m key)
-                    0)]
-          (set! m (Map.put m key &(+ old @(Sleep.duration s))))))
+      (foreach [v values]
+        (let [key (key-fn v)
+              val (value-fn v)
+              val2 (if (Map.contains? &m key)
+                     (combine-fn val &(Map.get &m key))
+                     @val)]
+          (set! m (Map.put m key &val2))))
       m)))
+
+(defn summarize-sleeps [sleeps]
+  (map-from-array-with Sleep.guard
+                       Sleep.duration
+                       (fn [x y] (add-ref x y))
+                       sleeps))
 
 (def summary (summarize-sleeps &sleeps))
 
+(defn maximum-by [better? array-ref]
+  (Array.reduce &(fn [old new-ref] (if (better? &old new-ref) @new-ref old))
+                (Array.first array-ref)
+                array-ref))
+
+(defn compare-b [p1 p2]
+  (> (Pair.b p2)
+     (Pair.b p1)))
+
 (defn best-sleeper [summary]
-  (let [arr (Map.to-array summary)
-        guard -1
-        best -1]
-    (do
-      (foreach [p &arr]
-        (when (> @(Pair.b p) best)
-          (do
-            (set! guard @(Pair.a p))
-            (set! best @(Pair.b p)))))
-      guard)))
+  @(Pair.a
+    &(maximum-by compare-b
+                 &(Map.to-array summary))))
 
 (defn best-minute [guard sleeps]
   (let [ss (Array.filter &(fn [s] (= guard @(Sleep.guard s))) @sleeps)
@@ -84,18 +93,15 @@
         (for [m @(Sleep.start-m s) @(Sleep.end-m s)]
           (Array.aupdate! &mins m &(fn [i] (+ 1 @i)))))
       (println* &mins)
-      (let [smallest (Array.maximum &mins)
-            ind (Array.index-of &mins smallest)]
-        (do
-          (println* ind)
-          ind)))))
+      (maximum-by compare-b
+                  &(Array.enumerated &mins)))))
 
 
 (defn part1 []
   (do
     (println* &summary)
     (let [best (best-sleeper &summary)
-          minute (best-minute best &sleeps)]
+          minute @(Pair.a &(best-minute best &sleeps))]
       (do
         (println* best)
         (println* minute)
