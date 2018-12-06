@@ -34,7 +34,7 @@
               (do
                 (set! best-dist dist)
                 (set! best @cand))))))
-      best-dist)))
+      best)))
 
 (defn bounds [coords]
   (let [xs (Array.copy-map &(fn [c] @(Coord.x c)) coords)
@@ -43,18 +43,18 @@
       (println* (Array.minimum &xs) " " (Array.maximum &xs))
       (println* (Array.minimum &ys) " " (Array.maximum &ys)))))
 
-(defn draw-dist [d]
-  (if (< d 10)
-    (print* d)
-    (if (< d 35)
-      (print* (Char.from-int (+ d 87)))
-      (print* "."))))
+(defn draw-coord [c]
+  (if (= c sentinel)
+    (print* ".")
+    (let [hash (+ (* 17 @(Coord.x c)) @(Coord.y c))
+          sym (Char.from-int (+ 97 (Int.mod hash 25)))]
+      (print* sym))))
 
 (defn draw [coords min-x max-x min-y max-y]
   (for [y min-y max-y]
     (do
       (for [x min-x max-x]
-        (draw-dist (/ (closest coords &(Coord.init x y)) 2)))
+        (draw-coord &(closest coords &(Coord.init x y))))
       (IO.println ""))))
 
 (defn main []
