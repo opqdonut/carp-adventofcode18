@@ -1,0 +1,64 @@
+(def in (IO.read-file "../input.6.txt"))
+(def lines (the (Array String) (Array.pop-back (String.lines &in))))
+
+(deftype Coord [x Int
+                y Int])
+
+(defn = [c1 c2]
+  (and (= (Coord.x c1) (Coord.x c2))
+       (= (Coord.y c1) (Coord.y c2))))
+
+(defn parse [s]
+  (let [parts (String.split-by s &[\,])]
+    (Coord.init (Int.from-string &(String.trim &(Array.first &parts)))
+                (Int.from-string &(String.trim &(Array.last &parts))))))
+
+(def coords (Array.copy-map &parse &lines))
+
+(defn manhattan [c1 c2]
+  (+ (Int.abs (- @(Coord.x c1) @(Coord.x c2)))
+     (Int.abs (- @(Coord.y c1) @(Coord.y c2)))))
+
+(def sentinel &(Coord.init Int.MIN Int.MIN))
+
+(defn closest [coords c]
+  (let [best @sentinel
+        best-dist Int.MAX]
+    (do
+      (foreach [cand coords]
+        (let [dist (manhattan c cand)]
+          (do
+            (when (= dist best-dist)
+              (set! best @sentinel))
+            (when (< dist best-dist)
+              (do
+                (set! best-dist dist)
+                (set! best @cand))))))
+      best-dist)))
+
+(defn bounds [coords]
+  (let [xs (Array.copy-map &(fn [c] @(Coord.x c)) coords)
+        ys (Array.copy-map &(fn [c] @(Coord.y c)) coords)]
+    (do
+      (println* (Array.minimum &xs) " " (Array.maximum &xs))
+      (println* (Array.minimum &ys) " " (Array.maximum &ys)))))
+
+(defn draw-dist [d]
+  (if (< d 10)
+    (print* d)
+    (if (< d 35)
+      (print* (Char.from-int (+ d 87)))
+      (print* "."))))
+
+(defn draw [coords min-x max-x min-y max-y]
+  (for [y min-y max-y]
+    (do
+      (for [x min-x max-x]
+        (draw-dist (/ (closest coords &(Coord.init x y)) 2)))
+      (IO.println ""))))
+
+(defn main []
+  (do
+    (println* &coords)
+    (bounds &coords)
+    (draw &coords 40 360 40 360)))
