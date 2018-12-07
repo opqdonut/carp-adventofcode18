@@ -99,13 +99,30 @@
                 (set! external (Array.push-back external c)))))))
       (let [int-counts (Array.reduce &Map.remove counts &external)
             candidates (Map.to-array &int-counts)
-            ;;candidates (Array.copy-map &(fn [c] (Pair.init @c (Map.get &counts c))) &ints)
             best (maximum-by compare-b &candidates)]
         (println* &best)))))
+
+(def max-dist 10000)
+
+(defn part2 []
+  (let [min-x -160 max-x 560 min-y -160 max-y 560
+        count 0]
+
+    (do
+      (for [y min-y max-y]
+        (for [x min-x max-x]
+          (let [now &(Coord.init x y)]
+            (when (> max-dist (Array.reduce
+                               &(fn [d c] (+ d (manhattan c now)))
+                               0
+                               &coords))
+              (set! count (+ count 1))))))
+      (println* count))))
 
 (defn main []
   (do
     (println* &coords)
     (bounds &coords)
     ;;(draw &coords 40 360 40 360)
-    (part1 &coords)))
+    (part1 &coords)
+    (part2)))
