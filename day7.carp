@@ -1,0 +1,96 @@
+(def in (IO.read-file "../input.7.txt"))
+(def lines (the (Array String) (Array.pop-back (String.lines &in))))
+
+(defn parse [s]
+  (let [parts (String.words s)]
+    (Pair.init-from-refs
+     (Array.nth &parts 1)
+     (Array.nth &parts 7))))
+
+(def pairs (Array.copy-map &parse &lines))
+
+(defn add-child [g p c]
+  (let [old (if (Map.contains? &g p)
+              (Map.get &g p)
+              [])]
+    (Map.put g p &(Array.push-back old @c))))
+
+(defn add-pair [g p]
+  (add-child g (Pair.b p) (Pair.a p)))
+
+(defn pairs-to-graph [pairs]
+  (Array.reduce &add-pair
+                {}
+                pairs))
+
+(def graph (pairs-to-graph &pairs))
+
+(def example-graph (pairs-to-graph &[(Pair.init-from-refs "C" "A")
+                                     (Pair.init-from-refs "C" "F")
+                                     (Pair.init-from-refs "A" "B")
+                                     (Pair.init-from-refs "A" "D")
+                                     (Pair.init-from-refs "B" "E")
+                                     (Pair.init-from-refs "D" "E")
+                                     (Pair.init-from-refs "F" "E")]))
+
+(defn remove-all [set vals]
+  (Array.reduce &Set.remove set vals))
+
+(defn keys [m]
+  (Array.copy-map &(fn [p] @(Pair.a p)) &(Map.to-array m)))
+
+(defn vals [m]
+  (Array.copy-map &(fn [p] @(Pair.b p)) &(Map.to-array m)))
+
+(defn root [graph]
+  (let [pairs (Map.to-array graph)
+        all (Set.from-array &(keys graph))
+        roots (Set.to-array &(Array.reduce &remove-all all &(vals graph)))]
+    (Array.first &roots)))
+
+(defn leafs [graph]
+  (let [all (Set.from-array &(Array.concat &(vals graph)))]
+    (remove-all all &(keys graph))))
+
+(defn all-nodes [graph]
+   (Array.sort
+    (Set.to-array
+     &(Set.from-array &(Array.concat &[(keys graph)
+                                       (Array.concat &(vals graph))]))))))
+
+(defn contains? [arr val]
+  (< 0 (Array.element-count arr val)))
+
+(defn dfs [graph cur visited]
+  (do
+    (foreach [c &(Array.sort (Map.get graph cur))]
+      (when (not (contains? &visited c))
+        (set! visited (dfs graph c visited))))
+    (Array.push-back visited @cur)))
+
+(defn part1 [graph]
+  (let [out []
+        left (all-nodes graph)]
+    (do
+      (println* &left)
+      (while (not (Array.empty? &left))
+        (let [out-ref &out]
+          (do
+            (foreach [target &left]
+              (do
+                (let [deps (Map.get graph target)]
+                  (when (Array.all? &(fn [dep] (contains? out-ref dep)) &deps)
+                    (do
+                      (set! out (Array.push-back out @target))
+                      ;; XXX mutating inside foreach is bad
+                      (set! left (Array.filter &(fn [c] (not (= target c))) left))
+                      (break)))))))))
+      (println* &(String.concat &out)))))
+
+(defn main []
+  (do
+    (part1 &example-graph)
+    (part1 &graph)
+    ))
+
+;; (load "../day7.carp")(build)
