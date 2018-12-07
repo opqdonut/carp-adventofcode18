@@ -75,10 +75,75 @@
                       (break)))))))))
       (println* &(String.concat &out)))))
 
+(defn task-duration [s]
+  (+ 61
+     (- (Char.to-int (String.char-at s 0))
+        (Char.to-int \A))))
+
+(defn can-start [to-start graph ended]
+  (let [out []]
+    (do
+      (foreach [target to-start]
+        (let [deps (Map.get graph target)]
+          (when (Array.all? &(fn [dep] (contains? ended dep)) &deps)
+            (set! out (Array.push-back out @target)))))
+      out)))
+
+(defn take-smallest [n arr]
+  (let [s (Array.sorted arr)
+        out []]
+    (do
+      (for [i 0 (Int.min n (Array.length &s))]
+        (set! out (Array.push-back out @(Array.nth &s i))))
+      out)))
+
+(defn compare-a [p1 p2]
+  (> (Pair.a p2)
+     (Pair.a p1)))
+
+(defn part2 [workers graph]
+  (let [in-progress []
+        time 0
+        to-start (all-nodes graph)
+        ended []]
+    (do
+      (while true
+        (let [limit (- workers (Array.length &in-progress))
+              next &(take-smallest limit &(can-start &to-start graph &ended))]
+          (do
+            (println* time)
+            (print* "STARTING ")
+            (println* next)
+            (print* "ENDED ")
+            (println* &ended)
+            (print* "TO-START ")
+            (println* &to-start)
+            (set! to-start (Array.filter &(fn [c] (not (contains? next c))) to-start))
+            (foreach [n next]
+              (Array.push-back! &in-progress
+                                (Pair.init (+ time (task-duration n))
+                                           @n)))
+            (when (Array.empty? &in-progress)
+              (break))
+            (set! in-progress (Array.sort-by in-progress &compare-a))
+            (print* "IN PROGRESS ")
+            (println* &in-progress)
+            (let [finished (Array.pop-back! &in-progress)]
+              (do
+                (print* "FINISH ")
+                (println* &finished)
+                (Array.push-back! &ended @(Pair.b &finished))
+                (set! time @(Pair.a &finished)))))))
+      (println* "DONE")
+      (println* time))))
+
+
+
 (defn main []
   (do
     (part1 &example-graph)
     (part1 &graph)
-    ))
+    (part2 2 &example-graph)
+    (part2 5 &graph)))
 
 ;; (load "../day7.carp")(build)
