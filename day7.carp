@@ -48,31 +48,19 @@
         roots (Set.to-array &(Array.reduce &remove-all all &(vals graph)))]
     (Array.first &roots)))
 
-(defn leafs [graph]
-  (let [all (Set.from-array &(Array.concat &(vals graph)))]
-    (remove-all all &(keys graph))))
-
 (defn all-nodes [graph]
-   (Array.sort
-    (Set.to-array
-     &(Set.from-array &(Array.concat &[(keys graph)
-                                       (Array.concat &(vals graph))]))))))
+  (Array.sort
+   (Set.to-array
+    &(Set.from-array &(Array.concat &[(keys graph)
+                                      (Array.concat &(vals graph))])))))
 
 (defn contains? [arr val]
   (< 0 (Array.element-count arr val)))
-
-(defn dfs [graph cur visited]
-  (do
-    (foreach [c &(Array.sort (Map.get graph cur))]
-      (when (not (contains? &visited c))
-        (set! visited (dfs graph c visited))))
-    (Array.push-back visited @cur)))
 
 (defn part1 [graph]
   (let [out []
         left (all-nodes graph)]
     (do
-      (println* &left)
       (while (not (Array.empty? &left))
         (let [out-ref &out]
           (do
