@@ -1,0 +1,46 @@
+(def in (IO.read-file "../input.8.txt"))
+(def in-words (String.words &in))
+(def ints (Array.copy-map &Int.from-string &in-words))
+
+(deftype Node [children (Array Int)
+               meta (Array Int)])
+
+(defn parse [store arr i]
+  (let [n-children @(Array.nth arr i)
+        n-meta @(Array.nth arr (inc i))
+        cur (+ i 2)
+        children (the (Array Int) [])
+        metas []]
+    (do
+      (for [c 0 n-children]
+        (let [cur+child-i (parse store arr cur)
+              new-cur @(Pair.a &cur+child-i)
+              child-i @(Pair.b &cur+child-i)]
+          (do
+            (set! cur new-cur)
+            (set! children (Array.push-back children child-i)))))
+      (for [m 0 n-meta]
+        (do
+          (set! metas (Array.push-back metas @(Array.nth arr cur)))
+          (set! cur (inc cur))))
+      (Array.push-back! store (Node.init children metas))
+      (Pair.init cur (dec (Array.length store))))))
+
+(defn parse-input [arr]
+  (let [store []
+        _ (parse &store arr 0)]
+    store))
+
+(def example-input [2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2])
+
+(defn part1 [input]
+  (println* (Array.reduce &(fn [s node] (+ s (Array.sum (Node.meta node))))
+                          0
+                          &(parse-input input))))
+
+(defn main []
+  (do
+    (part1 &example-input)
+    (part1 &ints)))
+
+;; (load "../day8.carp")(build)
