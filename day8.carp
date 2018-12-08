@@ -3,7 +3,7 @@
 (def ints (Array.copy-map &Int.from-string &in-words))
 
 (deftype Node [children (Array Int)
-               meta (Array Int)])
+               metas (Array Int)])
 
 (defn parse [store arr i]
   (let [n-children @(Array.nth arr i)
@@ -34,13 +34,41 @@
 (def example-input [2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2])
 
 (defn part1 [input]
-  (println* (Array.reduce &(fn [s node] (+ s (Array.sum (Node.meta node))))
+  (println* (Array.reduce &(fn [s node] (+ s (Array.sum (Node.metas node))))
                           0
                           &(parse-input input))))
+
+(defn evaluate [arr i]
+  (do
+    ;;(print* "EVALUATE ")
+    ;;(println* i)
+    (let [node (Array.nth arr i)
+          children_ (Node.children node)
+          metas_ (Node.metas node)
+          reductor (fn [sum child-ref]
+                     (let [child-i (dec @child-ref)]
+                       (+ sum
+                          (if (<= (Array.length children_) child-i)
+                            0
+                            (evaluate arr @(Array.nth children_ child-i))))))]
+      (do
+        (if (Array.empty? children_)
+          (Array.sum metas_)
+          (Array.reduce &reductor 0 metas_))))))
+
+(defn part2 [input]
+  (let [parsed (parse-input input)]
+    (do
+      ;;(println* &parsed)
+      (println* (evaluate &parsed (dec (Array.length &parsed)))))))
 
 (defn main []
   (do
     (part1 &example-input)
-    (part1 &ints)))
+    (part1 &ints)
+    (println* ";; PART 2 ;;")
+    (part2 &example-input)
+    (part2 &ints)))
+
 
 ;; (load "../day8.carp")(build)
