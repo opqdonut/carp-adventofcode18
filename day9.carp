@@ -1,0 +1,78 @@
+(sig insert-after (Fn [(Map Int Int) Int Int] (Map Int Int)))
+(defn insert-after [m i new]
+  (let [next (Map.get &m &i)]
+    (Map.put (Map.put m &i &new) &new &next)))
+
+(defn initial []
+  (Map.put (Map.create-with-len 70000)
+           &0 &0))
+
+(sig delete-after (Fn [(Map Int Int) Int] (Map Int Int)))
+(defn delete-after [m i]
+  (let [next (Map.get &m &i)
+        nnext (Map.get &m &next)]
+    (Map.put (Map.remove m &next) &i &nnext)))
+
+(defn move [m cur steps]
+  (do
+    (for [step 0 steps]
+      (set! cur (Map.get m &cur)))
+    cur))
+
+(defn move-back [m cur steps]
+  (let [siz (Map.length m)
+        to-move (- siz steps)]
+    (move m cur to-move)))
+
+(defn print-game [g]
+  (do
+    (print* 0)
+    (print* " ")
+    (let [cur (Map.get g &0)]
+      (while (not (= cur 0))
+        (do
+          (print* cur)
+          (print* " ")
+          (set! cur (Map.get g &cur)))))
+    (println* "")))
+
+(defn game [players last-marble]
+  (let [g (initial)
+        cur 0
+        player 0
+        scores (Array.replicate players &0)]
+    (do
+      (for [marble 1 (inc last-marble)]
+        (do
+          (if (= 0 (mod marble 23))
+            (let [back (move-back &g cur 8)
+                  to-delete (move &g back 1)
+                  to-score (+ to-delete marble)]
+              (do
+                (Array.aset! &scores player (+ to-score @(Array.nth &scores player)))
+                (set! g (delete-after g back))
+                (set! cur back)))
+            (do
+              (set! cur (move &g cur 1))
+              (set! g (insert-after g cur marble))))
+          (set! cur (move &g cur 1))
+          ;;(print* player)
+          ;;(print* ": ")
+          ;;(print-game &g)
+          (set! player (Int.mod (inc player) players))))
+      (println* (Array.maximum &scores)))))
+
+(defn main []
+  (do
+    (println* "TESTS")
+    (game 10 1618)
+    (game 13 7999)
+    (game 17 1104)
+    (game 21 6111)
+    (game 30 5807)
+    (println* "PART1")
+    (game 411 72059) ;; kinda slow
+    ))
+
+
+;; (load "../day9.carp")(build)
