@@ -1,53 +1,68 @@
-(sig insert-after (Fn [(Map Int Int) Int Int] (Map Int Int)))
-(defn insert-after [m i new]
-  (let [next (Map.get &m &i)]
-    (Map.put (Map.put m &i &new) &new &next)))
+(deftype Game [fwd (Array Int)
+               bck (Array Int)])
 
-(defn initial []
-  (Map.put (Map.create-with-len 70000)
-           &0 &0))
+(defn new-game [siz]
+  (Game.init (Array.aset (Array.allocate siz) 0 0)
+             (Array.aset (Array.allocate siz) 0 0)))
 
-(sig delete-after (Fn [(Map Int Int) Int] (Map Int Int)))
-(defn delete-after [m i]
-  (let [next (Map.get &m &i)
-        nnext (Map.get &m &next)]
-    (Map.put (Map.remove m &next) &i &nnext)))
+(sig insert-after (Fn [Game Int Int] Game))
+(defn insert-after [g i new]
+  (let [next @(Array.nth (Game.fwd &g) i)]
+    (do
+      (Array.aset! (Game.fwd &g) i new)
+      (Array.aset! (Game.fwd &g) new next)
+      (Array.aset! (Game.bck &g) next new)
+      (Array.aset! (Game.bck &g) new i)
+      g)))
 
-(defn move [m cur steps]
+(sig delete-after (Fn [Game Int] Game))
+(defn delete-after [g i]
+  (let [next @(Array.nth (Game.fwd &g) i)
+        nnext @(Array.nth (Game.fwd &g) next)]
+    (do
+      (Array.aset! (Game.fwd &g) i nnext)
+      (Array.aset! (Game.bck &g) nnext i)
+      g)))
+
+(defn move [g cur steps]
   (do
     (for [step 0 steps]
-      (set! cur (Map.get m &cur)))
+      (set! cur @(Array.nth (Game.fwd g) cur)))
     cur))
 
-(defn move-back [m cur steps]
-  (let [siz (Map.length m)
-        to-move (- siz steps)]
-    (move m cur to-move)))
+(defn move-back [g cur steps]
+  (do
+    (for [step 0 steps]
+      (set! cur @(Array.nth (Game.bck g) cur)))
+    cur))
 
 (defn print-game [g]
   (do
     (print* 0)
     (print* " ")
-    (let [cur (Map.get g &0)]
+    (let [cur (move g 0 1)]
       (while (not (= cur 0))
         (do
           (print* cur)
           (print* " ")
-          (set! cur (Map.get g &cur)))))
+          (set! cur (move g cur 1)))))
     (println* "")))
 
 (defn game [players last-marble]
-  (let [g (initial)
+  (let [g (new-game (inc last-marble))
         cur 0
         player 0
-        scores (Array.replicate players &0)]
+        scores (Array.replicate players &(Long.from-int 0))]
     (do
+      (print* "SIZE ")
+      (println* (inc (the Int last-marble)))
       (for [marble 1 (inc last-marble)]
         (do
           (if (= 0 (mod marble 23))
             (let [back (move-back &g cur 8)
                   to-delete (move &g back 1)
-                  to-score (+ to-delete marble)]
+                  to-score (+ (Long.from-int to-delete)
+                              (Long.from-int marble))]
               (do
                 (Array.aset! &scores player (+ to-score @(Array.nth &scores player)))
                 (set! g (delete-after g back))
@@ -60,7 +75,8 @@
           ;;(print* ": ")
           ;;(print-game &g)
           (set! player (Int.mod (inc player) players))))
-      (println* (Array.maximum &scores)))))
+      ;; weird, this is the only way to get the right answer to print for part 2
+      (IO.println &(Long.format "%u" (Array.maximum &scores))))))
 
 (defn main []
   (do
@@ -71,7 +87,9 @@
     (game 21 6111)
     (game 30 5807)
     (println* "PART1")
-    (game 411 72059) ;; kinda slow
+    (game 411 72059)
+    (println* "PART2")
+    (game 411 7205900)
     ))
 
 
