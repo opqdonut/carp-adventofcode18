@@ -75,7 +75,7 @@
           ;;(print* ": ")
           ;;(print-game &g)
           (set! player (Int.mod (inc player) players))))
-      ;; weird, this is the only way to get the right answer to print for part 2
+      ;; longs are truncated to ints due to #351, but the answer fits in an unsigned int
       (IO.println &(Long.format "%u" (Array.maximum &scores))))))
 
 (defn main []
