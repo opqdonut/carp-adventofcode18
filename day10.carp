@@ -1,0 +1,134 @@
+(def in (IO.read-file "../input.10.txt"))
+(def lines (the (Array String) (Array.pop-back (String.lines &in))))
+
+(deftype Point [pos (Pair Int Int)
+                vel (Pair Int Int)])
+
+(defn add-to [p t p-ref]
+  (let [vx (Pair.a p-ref)
+        vy (Pair.b p-ref)]
+    (Pair.update-b
+     (Pair.update-a
+      p
+      &(fn [x] (+ x (* t @vx))))
+     &(fn [y] (+ y (* t @vy))))))
+
+(defn move [point t]
+  (let [vel (Point.vel &point)]
+    (Point.update-pos
+     point
+     &(fn [pos]
+        (add-to pos t vel)))))
+
+(defn parse [line]
+  (let [parts &(String.split-by line &[\< \> \,])]
+    (Point.init (Pair.init (Int.from-string (Array.nth parts 1))
+                           (Int.from-string (Array.nth parts 2)))
+                (Pair.init (Int.from-string (Array.nth parts 4))
+                           (Int.from-string (Array.nth parts 5))))))
+
+(def points (Array.copy-map &parse &lines))
+
+(defn maximum-by [better? array-ref]
+  (Array.reduce &(fn [old new-ref] (if (better? &old new-ref) @new-ref old))
+                (Array.first array-ref)
+                array-ref))
+
+(defn pair-to-bb [pair]
+  (Pair.init
+   (Pair.init-from-refs (Pair.a pair) (Pair.a pair))
+   (Pair.init-from-refs (Pair.b pair) (Pair.b pair))))
+
+(defn broaden [pair val]
+  (Pair.update-b
+   (Pair.update-a
+    pair
+    &(fn [min-v] (min min-v val)))
+   &(fn [max-v] (max max-v val))))
+
+(sig update-bb (Fn [(Pair (Pair Int Int) (Pair Int Int))
+                    &(Pair Int Int)]
+                   (Pair (Pair Int Int) (Pair Int Int))))
+(defn update-bb [bb pair]
+  (let [x (the Int @(Pair.a pair))
+        y (the Int @(Pair.b pair))]
+    (Pair.update-b
+     (Pair.update-a
+      bb
+      &(fn [xbb] (broaden xbb x)))
+     &(fn [ybb] (broaden ybb y)))))
+
+(defn bb [points]
+  (Array.reduce &(fn [bb point] (update-bb bb (Point.pos point)))
+                (pair-to-bb (Point.pos &(Array.first points)))
+                points))
+
+;; TODO move to core
+(defn hash [pair]
+  (+ (* 17 (hash (Pair.a pair)))
+     (hash (Pair.a pair))))
+
+(defn draw [points]
+  (let [bbox &(bb points)
+        x-bbox (Pair.a bbox)
+        min-x @(Pair.a x-bbox)
+        max-x @(Pair.b x-bbox)
+        y-bbox (Pair.b bbox)
+        min-y @(Pair.a y-bbox)
+        max-y @(Pair.b y-bbox)
+        coords (the (Set (Pair Int Int)) (Set.create))]
+    (do
+      (foreach [p points]
+        (set! coords (Set.put coords (Point.pos p))))
+      (for [y min-y (inc max-y)]
+        (do
+          (for [x min-x (inc max-x)]
+            (print* (if (Set.contains? &coords &(Pair.init x y)) "#" ".")))
+          (println* ""))))))
+
+(defn bb-size [bb]
+  (let [bb-x (Pair.a bb)
+        bb-y (Pair.b bb)]
+    (+ (Int.abs (- @(Pair.a bb-x) @(Pair.b bb-x)))
+       (Int.abs (- @(Pair.a bb-y) @(Pair.b bb-y))))))
+
+(defn move-all [points t]
+  (Array.copy-map &(fn [p] (move @p t)) points))
+
+(defn bb-at-time [points t]
+  (bb &(move-all points t)))
+
+(defn minimize-bb [points]
+  (let [f (fn [t] (bb-size &(bb-at-time points t)))
+        t0 0
+        t0-size (f t0)
+        step 1000
+        t1 5000
+        t1-size (f t1)]
+    (do
+      (while (> step 0)
+        (do
+          ;;(print* "SEARCH ") (print* t0) (print* " ") (print* t1) (print* " ") (println* step)
+          (while (> t0-size t1-size)
+            (do
+              (set! t0 t1)
+              (set! t1 (+ t1 step))
+              (set! t0-size (f t0))
+              (set! t1-size (f t1))))
+          ;;(println* "FOUND ") (print* t0) (print* " ") (println* t1)
+          (set! t0 (- t0 step))
+          (set! step (/ step 10))
+          (set! t1 (+ t0 step))
+          (set! t0-size (f t0))
+          (set! t1-size (f t1))))
+      (inc t0))))
+
+(defn main []
+  (do
+    ;;(println* &points)
+    (println* &(bb-at-time &points (minimize-bb &points)))
+    (let [t0 (minimize-bb &points)]
+      (do
+        (draw &(move-all &points t0))
+        (println* t0)))
+    ()))
