@@ -8,21 +8,25 @@
 (sig insert-after (Fn [Game Int Int] Game))
 (defn insert-after [g i new]
   (let [next @(Array.nth (Game.fwd &g) i)]
-    (do
-      (Array.aset! (Game.fwd &g) i new)
-      (Array.aset! (Game.fwd &g) new next)
-      (Array.aset! (Game.bck &g) next new)
-      (Array.aset! (Game.bck &g) new i)
-      g)))
+    (Game.update-bck
+     (Game.update-fwd
+      g
+      &(fn [fwd_]
+         (Array.aset (Array.aset fwd_ i new) new next)))
+     &(fn [bck_]
+        (Array.aset (Array.aset bck_ next new) new i)))))
 
 (sig delete-after (Fn [Game Int] Game))
 (defn delete-after [g i]
   (let [next @(Array.nth (Game.fwd &g) i)
         nnext @(Array.nth (Game.fwd &g) next)]
-    (do
-      (Array.aset! (Game.fwd &g) i nnext)
-      (Array.aset! (Game.bck &g) nnext i)
-      g)))
+    (Game.update-bck
+     (Game.update-fwd
+      g
+      &(fn [fwd_]
+         (Array.aset fwd_ i nnext)))
+     &(fn [bck_]
+        (Array.aset bck_ nnext i)))))
 
 (defn move [g cur steps]
   (do
