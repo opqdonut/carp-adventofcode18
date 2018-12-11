@@ -35,7 +35,75 @@
                 (set! best-y y))))))
       (print* best-x) (print* ",") (println* best-y))))
 
+;; TODO move to core
+(defn hash [pair]
+  (+ (* 300 (hash (Pair.a pair)))
+     (hash (Pair.a pair))))
+
+;;
+;; oooy
+;; oooy
+;; oooy
+;; xxxx
+
+(defn size-1 [serial]
+  (let [ret (Map.create-with-len 100000)]
+    (do
+      (for [x 1 300]
+        (for [y 1 300]
+          (set! ret (Map.put ret &(Pair.init x y) &(value x y serial)))))
+      ret)))
+
+(defn increase [prev-sums new-size serial]
+  (let [ret (Map.create-with-len 100000)]
+    (do
+      (for [x 1 (- 301 new-size)]
+        (for [y 1 (- 301 new-size)]
+          (let [base (Map.get prev-sums &(Pair.init x y))]
+            (do
+              (for [y2 y (+ y new-size)]
+                (set! base (+ base (value x y2 serial))))
+              (for [x2 x (inc (+ x new-size))]
+                (set! base (+ base (value x2 y serial))))
+              (set! ret (Map.put ret &(Pair.init x y) &base))))))
+      ret)))
+
+(defn part2 [serial]
+  (let [values (size-1 serial)
+        size 1
+        best -100
+        best-x 0
+        best-y 0
+        best-size 0]
+    (do
+      (while (<= size 17) ;;300)
+        (do
+          (println* "LOOP")
+          (foreach [pair &(Map.to-array &values)]
+             (let [val @(Pair.b pair)
+                   x @(Pair.a (Pair.a pair))
+                   y @(Pair.b (Pair.a pair))]
+               (when (> val best)
+                 (do
+                   (set! best val)
+                   (set! best-x x)
+                   (set! best-y y)
+                   (set! best-size size)))))
+          (print* size) (print* ":") (println* best)
+          (set! size (inc size))
+          (set! values (increase &values size serial))))
+      (print* best-x)
+      (print* ",")
+      (print* best-y)
+      (print* ",")
+      (println* best-size))))
+
+
 (defn main []
   (do
     (test-value)
-    (part1)))
+    (part1)
+    ;; part 2
+    (part2 18)
+    (part2 42)
+    (part2 serial)))
