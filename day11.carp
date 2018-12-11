@@ -1,0 +1,41 @@
+(defn value [x y serial]
+  (let [rack-id (+ 10 x)
+        value (* (+ (* rack-id y) serial) rack-id)
+        hund (/ (Int.mod value 1000) 100)]
+    (- hund 5)))
+
+(defn test-value []
+  (do
+    (println* (value 122 79 57)) ;; -5
+    (println* (value 217 196 39)) ;; 0
+    (println* (value 101 153 71)))) ;; 4
+
+(defn value-grid [x0 y0 serial]
+  (let [sum 0]
+    (do
+      (for [x x0 (+ x0 3)]
+        (for [y y0 (+ y0 3)]
+          (set! sum (+ sum (value x y serial)))))
+      sum)))
+
+(def serial 6548)
+
+(defn part1 []
+  (let [best -10
+        best-x 0
+        best-y 0]
+    (do
+      (for [x 1 298]
+        (for [y 1 298]
+          (let [v (value-grid x y serial)]
+            (when (> v best)
+              (do
+                (set! best v)
+                (set! best-x x)
+                (set! best-y y))))))
+      (print* best-x) (print* ",") (println* best-y))))
+
+(defn main []
+  (do
+    (test-value)
+    (part1)))
