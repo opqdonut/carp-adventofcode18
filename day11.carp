@@ -40,12 +40,6 @@
   (+ (* 300 (hash (Pair.a pair)))
      (hash (Pair.a pair))))
 
-;;
-;; oooy
-;; oooy
-;; oooy
-;; xxxx
-
 (defn size-1 [serial]
   (let [ret (Map.create-with-len 100000)]
     (do
@@ -54,6 +48,13 @@
           (set! ret (Map.put ret &(Pair.init x y) &(value x y serial)))))
       ret)))
 
+;;
+;; oooy
+;; oooy
+;; oooy
+;; xxxx
+;;
+
 (defn increase [prev-sums new-size serial]
   (let [ret (Map.create-with-len 100000)]
     (do
@@ -61,10 +62,10 @@
         (for [y 1 (- 301 new-size)]
           (let [base (Map.get prev-sums &(Pair.init x y))]
             (do
-              (for [y2 y (+ y new-size)]
-                (set! base (+ base (value x y2 serial))))
-              (for [x2 x (inc (+ x new-size))]
-                (set! base (+ base (value x2 y serial))))
+              (for [y2 y (+ y (dec new-size))]
+                (set! base (+ base (value (+ x (dec new-size)) y2 serial))))
+              (for [x2 x (inc (+ x (dec new-size)))]
+                (set! base (+ base (value x2 (+ y (dec new-size)) serial))))
               (set! ret (Map.put ret &(Pair.init x y) &base))))))
       ret)))
 
@@ -76,9 +77,8 @@
         best-y 0
         best-size 0]
     (do
-      (while (<= size 17) ;;300)
+      (while (<= size 300)
         (do
-          (println* "LOOP")
           (foreach [pair &(Map.to-array &values)]
              (let [val @(Pair.b pair)
                    x @(Pair.a (Pair.a pair))
@@ -104,6 +104,6 @@
     (test-value)
     (part1)
     ;; part 2
-    (part2 18)
-    (part2 42)
+    ;(part2 18)
+    ;(part2 42)
     (part2 serial)))
