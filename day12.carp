@@ -1,0 +1,83 @@
+(def in (IO.read-file "../input.12.txt"))
+(def in-lines (Array.pop-back (String.lines &in)))
+
+(defn b2i [b]
+  (if b 1 0))
+
+(defn env-to-number [l2 l1 x r1 r2]
+  (+ (b2i r2)
+     (* 2 (+ (b2i r1)
+             (* 2 (+ (b2i x)
+                     (* 2 (+ (b2i l1)
+                             (* 2 (b2i l2))))))))))
+
+(defn c2b [c]
+  (= c \#))
+
+(defn parse-rule [line]
+  (Pair.init (env-to-number (c2b (String.char-at line 0))
+                            (c2b (String.char-at line 1))
+                            (c2b (String.char-at line 2))
+                            (c2b (String.char-at line 3))
+                            (c2b (String.char-at line 4)))
+             (c2b (String.char-at line 9))))
+
+(defn parse-rules [lines]
+  (let [out (Array.replicate 32 &false)]
+    (do
+      (foreach [l lines]
+        (when (= (String.length l) 10)
+          (let [pair (parse-rule l)]
+            (do
+              ;;(println* l)
+              ;;(println* &pair)
+              (set! out (Array.aset out @(Pair.a &pair) @(Pair.b &pair)))))))
+      out)))
+
+(def rules (parse-rules &in-lines))
+
+(defn parse-init [line]
+  (let [slice (String.substring line
+                                (String.length "initial state: ")
+                                (String.length line))
+        set (the (Set Int) (Set.create))]
+    (do
+      (for [i 0 (String.length &slice)]
+        (when (c2b (String.char-at &slice i))
+          (set! set (Set.put set &i))))
+      set)))
+
+(def init (parse-init &(Array.first &in-lines)))
+
+(defn evaluate [live i]
+  @(Array.nth &rules
+              (env-to-number (Set.contains? live &(- i 2))
+                             (Set.contains? live &(- i 1))
+                             (Set.contains? live &i)
+                             (Set.contains? live &(+ i 1))
+                             (Set.contains? live &(+ i 2)))))
+
+(sig evolve (Fn [(Ref (Set Int))] (Set Int)))
+(defn evolve [live]
+  (let [min-i (Set.reduce (fn [s i] (Int.min s @i)) Int.MAX live)
+        max-i (Set.reduce (fn [s i] (Int.max s @i)) Int.MIN live)
+        next (Set.create)]
+    (do
+      (for [i (- min-i 2) (+ max-i 3)]
+        (when (evaluate live i)
+          (set! next (Set.put next &i))))
+      next)))
+
+(defn part1 []
+  (let [state @&init]
+    (do
+      (for [step 0 20]
+        (set! state (evolve &state)))
+      (println* (Set.reduce (fn [s i] (+ s @i)) 0 &state)))))
+
+(defn main []
+  (do
+    (println* &rules)
+    (println* &(Set.to-array &init))
+    (part1)
+    ))
