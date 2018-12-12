@@ -68,16 +68,93 @@
           (set! next (Set.put next &i))))
       next)))
 
+(defn set-sum [set]
+  (Set.reduce (fn [s i] (+ s @i)) 0 set))
+
 (defn part1 []
   (let [state @&init]
     (do
       (for [step 0 20]
         (set! state (evolve &state)))
-      (println* (Set.reduce (fn [s i] (+ s @i)) 0 &state)))))
+      (println* (set-sum &state)))))
+
+(defn subset? [set-a set-b]
+  (Set.reduce (fn [boo a] (and boo (Set.contains? set-b a)))
+              true
+              set-a))
+
+(defn = [set-a set-b]
+  (and (= (Set.length set-a) (Set.length set-b))
+       (and (subset? set-a set-b)
+            (subset? set-b set-a))))
+
+;; Not used
+(defn find-cycle [init]
+  (let [t-hare 0
+        t-tortoise 0
+        hare @init
+        tortoise @init
+        go-tortoise false]
+    (do
+      (for [_ 0 150]
+        (do
+          (when go-tortoise
+            (do
+              (set! tortoise (evolve &tortoise))
+              (set! t-tortoise (Int.inc t-tortoise))))
+          (set! go-tortoise (Bool.not go-tortoise))
+          (set! hare (evolve &hare))
+          (set! t-hare (Int.inc t-hare))
+          ;;(println* (Set.length &hare))
+          ;;(println* &hare)
+          (when (= &tortoise &hare)
+            (break))))
+      (println* t-tortoise)
+      (println* t-hare))))
+
+(defn drift? [state-a state-b]
+  (and (= (Set.length state-a) (Set.length state-b))
+       (Set.reduce (fn [boo a] (and boo (Set.contains? state-b &(Int.inc @a))))
+                   true
+                   state-a)))
+
+(defn test-drift? []
+  (do
+    (println* (drift? &(Set.from-array &[1 5 7]) &(Set.from-array &[2 6 8])))
+    (println* (drift? &(Set.from-array &[1 5 7]) &(Set.from-array &[2 6 9])))))
+
+(defn find-drift [init]
+  (let [state @init
+        t 0]
+    (do
+      (while true
+        (let [new-state (evolve &state)]
+          (do
+            (when (drift? &state &new-state)
+              (break))
+            (set! t (inc t))
+            (set! state new-state))))
+      (Pair.init t state))))
+
+(defn part2 []
+  (let [drift &(find-drift &init)
+        drift-t (Long.from-int @(Pair.a drift))
+        drift-state (Pair.b drift)
+        drift-sum (Long.from-int (set-sum drift-state))
+        drift-size (Long.from-int (Set.length drift-state))
+        target 50000000000l]
+    (do
+      ;;(println* drift)
+      (println* (+ drift-sum
+                   (* (- target drift-t)
+                      drift-size))))))
+
 
 (defn main []
   (do
     (println* &rules)
     (println* &(Set.to-array &init))
     (part1)
+    ;;(test-drift?)
+    (part2)
     ))
