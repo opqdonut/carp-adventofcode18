@@ -78,14 +78,17 @@
         (set! state (evolve &state)))
       (println* (set-sum &state)))))
 
+;; TODO move to core
 (defn subset? [set-a set-b]
   (Set.reduce (fn [boo a] (and boo (Set.contains? set-b a)))
               true
               set-a))
 
+;; TODO move to core
 (defn = [set-a set-b]
   (and (= (Set.length set-a) (Set.length set-b))
        (and (subset? set-a set-b)
+            ;; TODO this is not necessary since we test length
             (subset? set-b set-a))))
 
 ;; Not used
