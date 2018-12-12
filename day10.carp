@@ -63,11 +63,6 @@
                 (pair-to-bb (Point.pos &(Array.first points)))
                 points))
 
-;; TODO move to core
-(defn hash [pair]
-  (+ (* 17 (hash (Pair.a pair)))
-     (hash (Pair.a pair))))
-
 (defn draw [points]
   (let [bbox &(bb points)
         x-bbox (Pair.a bbox)

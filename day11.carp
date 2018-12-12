@@ -35,11 +35,6 @@
                 (set! best-y y))))))
       (print* best-x) (print* ",") (println* best-y))))
 
-;; TODO move to core
-(defn hash [pair]
-  (+ (* 300 (hash (Pair.a pair)))
-     (hash (Pair.b pair))))
-
 (defn size-1 [serial]
   (let [ret (Map.create-with-len 100000)]
     (do
