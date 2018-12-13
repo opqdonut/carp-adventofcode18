@@ -7,7 +7,8 @@
 (deftype Cart [y Int
                x Int
                dir Char ;; <,>,v,^
-               next-turn Char]) ;; L,S,R
+               next-turn Char ;; L,S,R
+               crashed Bool])
 
 (defn cart? [c]
   (<= 0 (Array.index-of &[\< \> \v \^] c)))
@@ -33,7 +34,7 @@
             (let [c (String.char-at line x)]
               (when (cart? c)
                 (do
-                  (set! carts (Array.push-back carts (Cart.init y x c \L)))
+                  (set! carts (Array.push-back carts (Cart.init y x c \L false)))
                   (String.string-set! line x (erase-cart c))))))))
       carts)))
 
@@ -51,8 +52,9 @@
     (do
       (let [line (Array.nth map y)]
         (for [x 0 (String.length line)]
-          (let [carts-here (Array.filter &(fn [ca] (and (= @(Cart.x ca) x)
-                                                        (= @(Cart.y ca) y)))
+          (let [carts-here (Array.filter &(fn [ca] (and (not @(Cart.crashed ca))
+                                                        (and (= @(Cart.x ca) x)
+                                                             (= @(Cart.y ca) y))))
                                          @carts)]
             (if (Array.empty? &carts-here)
               (print* (String.char-at line x))
@@ -61,8 +63,8 @@
 
 (defn compare-positions [c1 c2]
   (if (= (Cart.y c1) (Cart.y c2))
-    (< (Cart.x c1) (Cart.x c2))
-    (< (Cart.y c1) (Cart.y c2))))
+    (> (Cart.x c1) (Cart.x c2))
+    (> (Cart.y c1) (Cart.y c2))))
 
 (defn turn-left [dir]
   (Map.get &{\^ \<
@@ -131,7 +133,7 @@
         next-next-turn (if (= track \+)
                          (step-next-turn next-turn)
                          next-turn)]
-    (Cart.init next-y next-x next-dir next-next-turn)))
+    (Cart.init next-y next-x next-dir next-next-turn @(Cart.crashed &cart))))
 
 (defn sort-carts [carts]
   (Array.sort-by carts &compare-positions))
@@ -170,7 +172,50 @@
       ;;(draw &carts map)
       (set! carts (step-carts carts map)))))
 
+(defn crash? [ca1 ca2]
+  (and (and (not @(Cart.crashed ca1))
+            (not @(Cart.crashed ca2)))
+       (and (= (Cart.x ca1) (Cart.x ca2))
+            (= (Cart.y ca1) (Cart.y ca2)))))
+
+(defn part2 [carts map]
+  (while true
+    (do
+      (set! carts (sort-carts carts))
+      (for [i 0 (Array.length &carts)]
+        (let [ca (Array.nth &carts i)]
+          (unless @(Cart.crashed ca)
+            (let [new-ca (step-cart @ca map)]
+              (do
+                (for [j 0 (Array.length &carts)]
+                  (let [other-ca (Array.nth &carts j)]
+                    (when (and (not (= i j))
+                               (crash? &new-ca other-ca))
+                      (do
+                        (set! new-ca (Cart.set-crashed new-ca true))
+                        (Array.aset! &carts j (Cart.set-crashed @other-ca true))))))
+                (Array.aset! &carts i new-ca))))))
+      ;;(draw &carts map)
+      (let [left (Array.filter &(fn [ca] (not @(Cart.crashed ca))) @&carts)]
+        (do
+          (when (= 1 (Array.length &left))
+            (let [only (Array.first &left)]
+              (do
+                (draw &carts map)
+                (println* &only)
+                (break)))))))))
+
+(def example-2
+  [@"/>-<\\ "
+   @"|   | "
+   @"| /<+-\\ "
+   @"| | | v"
+   @"\\>+</ |"
+   @"  |   ^"
+   @"  \\<->/"])
+
 (defn main []
   (do
-    (part1 (find-carts &example) &example)
-    (part1 (find-carts &the-map) &the-map)))
+    (part2 (find-carts &example-2) &example-2)
+    (part2 (find-carts &the-map) &the-map)
+    ))
