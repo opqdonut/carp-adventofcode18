@@ -1,0 +1,176 @@
+(def in (IO.read-file "../input.13.txt"))
+(def the-map (Array.pop-back (String.lines &in)))
+
+(defn at [map y x]
+  (String.char-at (Array.nth map y) x))
+
+(deftype Cart [y Int
+               x Int
+               dir Char ;; <,>,v,^
+               next-turn Char]) ;; L,S,R
+
+(defn cart? [c]
+  (<= 0 (Array.index-of &[\< \> \v \^] c)))
+
+;; TODO core?
+(defmodule Char
+  (sig zero (Fn [] Char))
+  (defn zero [] \x))
+
+(defn erase-cart [c]
+  (Map.get &{\< \-
+             \> \-
+             \^ \|
+             \v \|}
+           &c))
+
+(defn find-carts [map]
+  (let [carts []]
+    (do
+      (for [y 0 (Array.length map)]
+        (let [line (Array.nth map y)]
+          (for [x 0 (String.length line)]
+            (let [c (String.char-at line x)]
+              (when (cart? c)
+                (do
+                  (set! carts (Array.push-back carts (Cart.init y x c \L)))
+                  (String.string-set! line x (erase-cart c))))))))
+      carts)))
+
+(def example
+  [@"/->-\\        "
+   @"|   |  /----\\ " ;; TODO had to insert a final space to make parser happy
+   @"| /-+--+-\\  |"
+   @"| | |  | v  |"
+   @"\\-+-/  \\-+--/"
+   @"  \\------/   "])
+
+(sig draw (Fn [&(Array Cart) &(Array String)] ()))
+(defn draw [carts map]
+  (for [y 0 (Array.length map)]
+    (do
+      (let [line (Array.nth map y)]
+        (for [x 0 (String.length line)]
+          (let [carts-here (Array.filter &(fn [ca] (and (= @(Cart.x ca) x)
+                                                        (= @(Cart.y ca) y)))
+                                         @carts)]
+            (if (Array.empty? &carts-here)
+              (print* (String.char-at line x))
+              (print* @(Cart.dir &(Array.first &carts-here)))))))
+      (println* ""))))
+
+(defn compare-positions [c1 c2]
+  (if (= (Cart.y c1) (Cart.y c2))
+    (< (Cart.x c1) (Cart.x c2))
+    (< (Cart.y c1) (Cart.y c2))))
+
+(defn turn-left [dir]
+  (Map.get &{\^ \<
+             \< \v
+             \v \>
+             \> \^}
+           &dir))
+
+(defn turn-right [dir]
+  (Map.get &{\^ \>
+             \> \v
+             \v \<
+             \< \^}
+           &dir))
+
+(defn do-turn [dir turn]
+  (if (= turn \L)
+    (turn-left dir)
+    (if (= turn \R)
+      (turn-right dir)
+      dir)))
+
+(defn step-next-turn [turn]
+  (Map.get &{\L \S
+             \S \R
+             \R \L}
+           &turn))
+
+(defn slash-turn [dir]
+  (Map.get &{\^ \>
+             \< \v
+             \> \^
+             \v \<}
+           &dir))
+
+(defn backslash-turn [dir]
+  (Map.get &{\^ \<
+             \< \^
+             \> \v
+             \v \>}
+           &dir))
+
+(defn step-cart [cart map]
+  (let [dir @(Cart.dir &cart)
+        x @(Cart.x &cart)
+        y @(Cart.y &cart)
+        next-turn @(Cart.next-turn &cart)
+        next-x (if (= dir \<)
+                 (- x 1)
+                 (if (= dir \>)
+                   (+ x 1)
+                   x))
+        next-y (if (= dir \^)
+                 (- y 1)
+                 (if (= dir \v)
+                   (+ y 1)
+                   y))
+        track (at map next-y next-x)
+        next-dir (if (= track \\)
+                   (backslash-turn dir)
+                   (if (= track \/)
+                     (slash-turn dir)
+                     (if (= track \+)
+                       (do-turn dir next-turn)
+                       dir)))
+        next-next-turn (if (= track \+)
+                         (step-next-turn next-turn)
+                         next-turn)]
+    (Cart.init next-y next-x next-dir next-next-turn)))
+
+(defn sort-carts [carts]
+  (Array.sort-by carts &compare-positions))
+
+(defn find-crash [carts]
+  (let [found false
+        sorted (sort-carts @carts)]
+    (do
+      (for [i 0 (dec (Array.length &sorted))]
+        (let [now (Array.nth &sorted i)
+              next (Array.nth &sorted (inc i))]
+          (when (and (= (Cart.x now) (Cart.x next))
+                   (= (Cart.y now) (Cart.y next)))
+            (do
+              (print* "CRASH ")
+              (print* (Cart.x now))
+              (print* ",")
+              (println* (Cart.y now))
+              (set! found true)
+              (break)))))
+      found)))
+
+(defn step-carts [carts map]
+  (do
+    (set! carts (sort-carts carts))
+    (for [i 0 (Array.length &carts)]
+      (do
+        (Array.aset! &carts i (step-cart @(Array.nth &carts i) map))
+        (when (find-crash &carts)
+          (break))))
+    carts))
+
+(defn part1 [carts map]
+  (while (not (find-crash &carts))
+    (do
+      ;;(draw &carts map)
+      (set! carts (step-carts carts map)))))
+
+(defn main []
+  (do
+    (part1 (find-carts &example) &example)
+    (part1 (find-carts &the-map) &the-map)))
