@@ -1,0 +1,80 @@
+(defn append-digits [arr num]
+  (if (< num 10)
+    (Array.push-back arr num)
+    (Array.push-back (Array.push-back arr (/ num 10)) (Int.mod num 10))))
+
+(defn part1 [num]
+  (let [arr [3 7]
+        elf1 0
+        elf2 1
+        target (+ num 10)]
+    (do
+      (while (< (Array.length &arr) target)
+        (let [digit1 @(Array.nth &arr elf1)
+              digit2 @(Array.nth &arr elf2)]
+          (do
+            (set! arr (append-digits arr (+ digit1 digit2)))
+            (let [len (Array.length &arr)]
+              (do
+                (set! elf1 (Int.mod (+ elf1 (inc digit1)) len))
+                (set! elf2 (Int.mod (+ elf2 (inc digit2)) len))))
+            ;;(println* &arr)
+            )))
+      (let [result (Array.subarray &arr num target)]
+        (println* &result)))))
+
+(defn subarray-at? [haystack needle i]
+  (if (< (Array.length haystack)
+         (+ i (Array.length needle)))
+    false
+    (let [found true]
+      (do
+        (for [j 0 (Array.length needle)]
+          (unless (= (Array.nth needle j) (Array.nth haystack (+ i j)))
+                  (do
+                    (set! found false)
+                    (break))))
+        found))))
+
+(defn find-array [haystack needle prev-end-i]
+  (let [start-i (Int.max 0 (- prev-end-i (Array.length needle)))
+        end-i (Int.max 0 (- (Array.length haystack) (Array.length needle)))
+        result -1]
+    (do
+      (for [i start-i end-i]
+        (when (subarray-at? haystack needle i)
+          (do
+            (set! result i)
+            (break))))
+      result)))
+
+(defn part2 [needle]
+  (let [arr [3 7]
+        elf1 0
+        elf2 1
+        prev-end 0]
+    (do
+      (while true
+        (let [digit1 @(Array.nth &arr elf1)
+              digit2 @(Array.nth &arr elf2)]
+          (do
+            (set! arr (append-digits arr (+ digit1 digit2)))
+            (let [len (Array.length &arr)]
+              (do
+                (set! elf1 (Int.mod (+ elf1 (inc digit1)) len))
+                (set! elf2 (Int.mod (+ elf2 (inc digit2)) len))
+                (let [ind (find-array &arr needle prev-end)]
+                  (do
+                    (set! prev-end len)
+                    (when (<= 0 ind)
+                      (do
+                        (println* ind)
+                        (break)))))))))))))
+
+(defn main []
+  (do
+    (part1 165061)
+    (println* ";; PART2 ;;")
+    (part2 &[5 1 5 8 9])
+    (part2 &[5 9 4 1 4])
+    (part2 &[1 6 5 0 6 1])))
