@@ -1,4 +1,6 @@
-(def s "\\ ")
+(deftype X [x Int])
 
 (defn main []
-  (println* s))
+  (println*
+   &(Array.copy-map &(fn [x] @(X.x x))
+                    &[(X.init 1)])))

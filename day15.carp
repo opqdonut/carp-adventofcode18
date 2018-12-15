@@ -77,7 +77,13 @@
           (Int.abs (- y1 y2))))))
 
 (deftype Unit [type Char
-               pos (Pair Int Int)])
+               pos (Pair Int Int)
+               hp Int])
+
+(defmodule UnitRef
+  (sig = (Fn [(Ref Unit) (Ref Unit)] Bool))
+  (defn = [u1 u2]
+    (= (Unit.pos u1) (Unit.pos u2))))
 
 (defn parse-units [map]
   (let [units []]
@@ -90,7 +96,9 @@
                         (= c \G))
                 (do
                   (String.string-set! line x \.)
-                  (set! units (Array.push-back units (Unit.init c (Pair.init x y))))))))))
+                  (set! units (Array.push-back units (Unit.init c
+                                                                (Pair.init x y)
+                                                                200)))))))))
       units)))
 
 (defn find-move [map units unit]
@@ -118,15 +126,42 @@
           @unit ;; can't move
           (Unit.set-pos @unit goal-coord))))))
 
-(defn compare-unit [u1 u2]
+(defn compare-pos [u1 u2]
   (compare-coord (Unit.pos u1) (Unit.pos u2)))
+
+(defn attack [units unit]
+  (let [my-pos (Unit.pos unit)
+        my-type (Unit.type unit)
+        in-range (Array.filter &(fn [u] (and
+                                         (not (= my-type (Unit.type u)))
+                                         (neighbouring? my-pos (Unit.pos u))))
+                               @&units)
+        get-hp (fn [u] @(Unit.hp u))] ;; need to name this because of #361
+    (if (Array.empty? &in-range)
+      units ;; nothing happens
+      (let [
+            min-hp (Array.minimum &(the (Array Int) (Array.copy-map &get-hp
+                                                                    &in-range)))
+            min-hp-ref &min-hp
+            min-hp-units (Array.filter &(fn [u] (= min-hp-ref (Unit.hp u)))
+                                       in-range)
+            selected (Array.first
+                      &(Array.sort-by min-hp-units &compare-pos))
+            selected-i (Array.index-of &units @&selected)] ;; TODO index-of should take ref
+        (Array.aset units selected-i (Unit.set-hp selected (- min-hp 3)))))))
+
+(defn alive? [u]
+  (<= 0 @(Unit.hp u)))
 
 (defn tick [map units]
   (do
-    (set! units (Array.sort-by units &compare-unit))
+    (set! units (Array.sort-by units &compare-pos))
     (for [i 0 (Array.length &units)]
       (let [new (find-move map &units (Array.nth &units i))]
-        (set! units (Array.aset units i new))))
+        (do
+          (set! units (Array.aset units i @&new))
+          (set! units (attack units &new))
+          (set! units (Array.filter &alive? units)))))
     units))
 
 ;; TODO to core?
@@ -148,7 +183,7 @@
                 (print* (String.char-at line x)))))
           (println* ""))))))
 
-(def test-map
+(def test-map-movement
   [@"#########"
    @"#G..G..G#"
    @"#.......#"
@@ -159,12 +194,22 @@
    @"#G..G..G#"
    @"#########"])
 
+(def test-map
+  [@"#######"
+   @"#.G...#"
+   @"#...EG#"
+   @"#.#.#G#"
+   @"#..G#E#"
+   @"#.....#"
+   @"#######"])
+
 (def test-map-ref &test-map)
 
 (defn main []
   (let [units (parse-units test-map-ref)]
-    (for [_ 0 4]
+    (for [round 0 50]
       (do
+        (println* round)
         (println* &units)
-        (draw test-map-ref &units)
+        ;;(draw test-map-ref &units)
         (set! units (tick test-map-ref units))))))
