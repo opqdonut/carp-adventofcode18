@@ -13,30 +13,31 @@
 (defn floor? [map coord]
   (not (= \# (at map coord))))
 
-(defn neighbours [map coord]
+(defn neighbours [coord]
   (let [x @(Pair.a coord)
         y @(Pair.b coord)]
-    (Array.filter &(fn [c] (floor? map c))
-                  [(Pair.init x (dec y))
-                   (Pair.init (dec x) y)
-                   (Pair.init (inc x) y)
-                   (Pair.init x (inc y))])))
+    [(Pair.init x (dec y))
+     (Pair.init (dec x) y)
+     (Pair.init (inc x) y)
+     (Pair.init x (inc y))]))
 
 (defn compare-coord [c1 c2]
   (if (= (Pair.b c1) (Pair.b c2))
     (> (Pair.a c1) (Pair.a c2))
     (> (Pair.b c1) (Pair.b c2))))
 
-(defn bfs [map found? coord]
-  (let [visited (Set.from-array &[coord])
+(defn bfs [map free? found? coord]
+  (let [visited (Set.from-array &[@coord])
         dist 0
         found (Pair.init -1 -1)]
     (do
       ;; TODO origin could be found?
       (while true
-        (let [candidates (Array.concat
+        (let [candidates (Array.concat ;; TODO reduce instead
                           &(Array.copy-map
-                            &(fn [coord] (neighbours map coord))
+                            &(fn [coord] (Array.filter
+                                          free?
+                                          (neighbours coord)))
                             &(Set.to-array &visited)))
               visited-ref &visited
               nexts (Array.sort-by
@@ -69,18 +70,60 @@
        (+ (Int.abs (- x1 x2))
           (Int.abs (- y1 y2))))))
 
+(deftype Unit [type Char
+               pos (Pair Int Int)])
+
+(defn parse-units [map]
+  (let [units []]
+    (do
+      (for [y 0 (Array.length map)]
+        (let [line (Array.nth map y)]
+          (for [x 0 (String.length line)]
+            (let [c (String.char-at line x)]
+              (when (or (= c \E)
+                        (= c \G))
+                (set! units (Array.push-back units (Unit.init c (Pair.init x y)))))))))
+      units)))
+
+(defn find-move [map units unit]
+  (let [unit-positions (Array.copy-map &(fn [u] @(Unit.pos u)) units)
+        obstructions (Set.from-array &unit-positions)
+        obstructions-ref &obstructions
+        free? (fn [c] (and (floor? map c)
+                           (not (Set.contains? obstructions-ref c))))
+        goals (Set.from-array
+               &(Array.concat
+                 &(Array.copy-map &(fn [u]
+                                     (if (= (Unit.type u) (Unit.type unit))
+                                       []
+                                       (neighbours (Unit.pos u))))
+                                  units)))
+        found? (fn [c] (Set.contains? &goals c))
+        goal (bfs map &free? &found? (Unit.pos unit))
+        goal-dist @(Pair.a &goal)
+        goal-coord (Pair.b &goal)]
+    (if (< goal-dist 0)
+      @unit ;; don't move
+      (let [possible-next-move? (fn [c] (neighbouring? c (Unit.pos unit)))
+            where-next (bfs map &free? &possible-next-move? goal-coord)
+            where-next-dist @(Pair.a &where-next)
+            where-next-coord @(Pair.b &where-next)]
+        (if (< where-next-dist 0)
+          @unit ;; don't move
+          (Unit.set-pos @unit where-next-coord))))))
+
 (def test-map
   [@"#######"
-   @"#.E...#"
-   @"#.....#"
+   @"#.E.#.#"
+   @"#E....#"
    @"#...G.#"
    @"#######"])
 
 (def test-map-ref &test-map)
 
 (defn main []
-  (do
-    (println*
-     &(bfs test-map-ref
-           &(fn [c] (neighbouring? c &(Pair.init 4 3)))
-           (Pair.init 2 1)))))
+  (let [units (parse-units test-map-ref)]
+    (do
+      (println* &units)
+      (println* &(find-move test-map-ref &units &(Array.first &units)))
+    )))
