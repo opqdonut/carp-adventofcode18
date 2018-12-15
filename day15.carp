@@ -40,6 +40,10 @@
     (do
       (while true
         (do
+          (when (Array.empty? &nexts)
+            (do
+              (set! dist -1)
+              (break)))
           (let [founds (Array.filter found? @&nexts)]
             (unless (Array.empty? &founds)
               (do
@@ -106,7 +110,8 @@
     (if (Array.any? &(fn [c] (= c (Unit.pos unit)))
                     &targets)
       @unit ;; no need to move
-      (let [goal (bfs map &free? &possible-next-move? &targets)
+      (let [free-targets (Array.filter free?ref targets)
+            goal (bfs map &free? &possible-next-move? &free-targets)
             goal-dist @(Pair.a &goal)
             goal-coord @(Pair.b &goal)]
         (if (< goal-dist 0)
