@@ -1,0 +1,4 @@
+(def s "\\ ")
+
+(defn main []
+  (println* s))

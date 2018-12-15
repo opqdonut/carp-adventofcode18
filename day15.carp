@@ -1,0 +1,86 @@
+(def in (IO.read-file "../input.13.txt"))
+(def the-map (Array.pop-back (String.lines &in)))
+
+(defn at [map coord]
+  (let [x @(Pair.a coord)
+        y @(Pair.b coord)]
+    (do
+      (if (and (and (<= 0 y) (< y (Array.length map)))
+               (and (<= 0 x) (< x (String.length (Array.nth map y)))))
+        (String.char-at (Array.nth map y) x)
+        \#))))
+
+(defn floor? [map coord]
+  (not (= \# (at map coord))))
+
+(defn neighbours [map coord]
+  (let [x @(Pair.a coord)
+        y @(Pair.b coord)]
+    (Array.filter &(fn [c] (floor? map c))
+                  [(Pair.init x (dec y))
+                   (Pair.init (dec x) y)
+                   (Pair.init (inc x) y)
+                   (Pair.init x (inc y))])))
+
+(defn compare-coord [c1 c2]
+  (if (= (Pair.b c1) (Pair.b c2))
+    (> (Pair.a c1) (Pair.a c2))
+    (> (Pair.b c1) (Pair.b c2))))
+
+(defn bfs [map found? coord]
+  (let [visited (Set.from-array &[coord])
+        dist 0
+        found (Pair.init -1 -1)]
+    (do
+      ;; TODO origin could be found?
+      (while true
+        (let [candidates (Array.concat
+                          &(Array.copy-map
+                            &(fn [coord] (neighbours map coord))
+                            &(Set.to-array &visited)))
+              visited-ref &visited
+              nexts (Array.sort-by
+                     (Array.filter
+                      &(fn [coord] (not (Set.contains? visited-ref coord)))
+                      candidates)
+                     &compare-coord)
+              founds (Array.filter found? @&nexts)]
+          (do
+            (set! dist (inc dist))
+            (when (Array.empty? &nexts)
+              (do
+                (set! dist -1)
+                (break)))
+            (unless (Array.empty? &founds)
+              (do
+                (set! found (Array.first &founds))
+                (break)))
+            (set! visited (Array.reduce &Set.put
+                                        visited
+                                        &nexts)))))
+      (Pair.init dist found))))
+
+(defn neighbouring? [c1 c2]
+  (let [x1 @(Pair.a c1)
+        y1 @(Pair.b c1)
+        x2 @(Pair.a c2)
+        y2 @(Pair.b c2)]
+    (= 1
+       (+ (Int.abs (- x1 x2))
+          (Int.abs (- y1 y2))))))
+
+(def test-map
+  [@"#######"
+   @"#.E...#"
+   @"#.....#"
+   @"#...G.#"
+   @"#######"])
+
+(def test-map-ref &test-map)
+
+(defn main []
+  (do
+    (println*
+     &(bfs test-map-ref
+           &(fn [c] (neighbouring? c &(Pair.init 4 3)))
+           (Pair.init 2 1)))))
