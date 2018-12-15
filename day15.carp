@@ -26,6 +26,12 @@
     (> (Pair.a c1) (Pair.a c2))
     (> (Pair.b c1) (Pair.b c2))))
 
+;; TODO move to core
+;; TODO could be reduce instead
+(defn concat-map [f xs]
+  (Array.concat
+   &(Array.copy-map f xs)))
+
 (defn bfs [map free? found? coords]
   (let [visited (Set.create)
         nexts (Array.sorted-by coords &compare-coord)
@@ -43,12 +49,11 @@
                                       visited
                                       &nexts))
           (set! dist (inc dist))
-          (let [candidates (Array.concat ;; TODO reduce instead
-                            &(Array.copy-map
-                              &(fn [coord] (Array.filter
-                                            free?
-                                            (neighbours coord)))
-                              &(Set.to-array &visited)))
+          (let [candidates (concat-map
+                            &(fn [coord] (Array.filter
+                                          free?
+                                          (neighbours coord)))
+                            &(Set.to-array &visited))
                 visited-ref &visited
                 new-nexts (Array.sort-by
                            (Array.filter
@@ -79,7 +84,9 @@
             (let [c (String.char-at line x)]
               (when (or (= c \E)
                         (= c \G))
-                (set! units (Array.push-back units (Unit.init c (Pair.init x y)))))))))
+                (do
+                  (String.string-set! line x \.)
+                  (set! units (Array.push-back units (Unit.init c (Pair.init x y))))))))))
       units)))
 
 (defn find-move [map units unit]
@@ -88,39 +95,71 @@
         obstructions-ref &obstructions
         free? (fn [c] (and (floor? map c)
                            (not (Set.contains? obstructions-ref c))))
-        targets (Array.concat
-                 &(Array.copy-map &(fn [u]
-                                     (if (= (Unit.type u) (Unit.type unit))
-                                       []
-                                       (neighbours (Unit.pos u))))
-                                  units))
-        possible-next-move? (fn [c] (neighbouring? c (Unit.pos unit)))
-        goal (bfs map &free? &possible-next-move? &targets)
-        goal-dist @(Pair.a &goal)
-        goal-coord @(Pair.b &goal)]
-    (if (< goal-dist 0)
-      @unit ;; don't move
-      (Unit.set-pos @unit goal-coord))))
+        free?ref &free?
+        targets (concat-map &(fn [u]
+                               (if (= (Unit.type u) (Unit.type unit))
+                                 []
+                                 (neighbours (Unit.pos u))))
+                            units)
+        possible-next-move? (fn [c] (and (~free?ref c)
+                                         (neighbouring? c (Unit.pos unit))))]
+    (if (Array.any? &(fn [c] (= c (Unit.pos unit)))
+                    &targets)
+      @unit ;; no need to move
+      (let [goal (bfs map &free? &possible-next-move? &targets)
+            goal-dist @(Pair.a &goal)
+            goal-coord @(Pair.b &goal)]
+        (if (< goal-dist 0)
+          @unit ;; can't move
+          (Unit.set-pos @unit goal-coord))))))
+
+(defn compare-unit [u1 u2]
+  (compare-coord (Unit.pos u1) (Unit.pos u2)))
 
 (defn tick [map units]
   (do
+    (set! units (Array.sort-by units &compare-unit))
     (for [i 0 (Array.length &units)]
       (let [new (find-move map &units (Array.nth &units i))]
         (set! units (Array.aset units i new))))
     units))
 
+;; TODO to core?
+(defn zero []
+  \?)
+
+(defn draw [map units]
+  (let [by-pos (Map.from-array
+                &(Array.copy-map
+                  &(fn [u] (Pair.init-from-refs (Unit.pos u) (Unit.type u)))
+                  units))]
+    (for [y 0 (Array.length map)]
+      (let [line (Array.nth map y)]
+        (do
+          (for [x 0 (String.length line)]
+            (let [c (Pair.init x y)]
+              (if (Map.contains? &by-pos &c)
+                (print* (Map.get &by-pos &c))
+                (print* (String.char-at line x)))))
+          (println* ""))))))
+
 (def test-map
-  [@"#######"
-   @"#.E.#.#"
-   @"#E....#"
-   @"#...G.#"
-   @"#######"])
+  [@"#########"
+   @"#G..G..G#"
+   @"#.......#"
+   @"#.......#"
+   @"#G..E..G#"
+   @"#.......#"
+   @"#.......#"
+   @"#G..G..G#"
+   @"#########"])
 
 (def test-map-ref &test-map)
 
 (defn main []
   (let [units (parse-units test-map-ref)]
-    (do
-      (println* &units)
-      (println* &(tick test-map-ref units))
-    )))
+    (for [_ 0 4]
+      (do
+        (println* &units)
+        (draw test-map-ref &units)
+        (set! units (tick test-map-ref units))))))
