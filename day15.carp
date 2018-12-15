@@ -1,4 +1,4 @@
-(def in (IO.read-file "../input.13.txt"))
+(def in (IO.read-file "../input.15.txt"))
 (def the-map (Array.pop-back (String.lines &in)))
 
 (defn at [map coord]
@@ -139,8 +139,7 @@
         get-hp (fn [u] @(Unit.hp u))] ;; need to name this because of #361
     (if (Array.empty? &in-range)
       units ;; nothing happens
-      (let [
-            min-hp (Array.minimum &(the (Array Int) (Array.copy-map &get-hp
+      (let [min-hp (Array.minimum &(the (Array Int) (Array.copy-map &get-hp
                                                                     &in-range)))
             min-hp-ref &min-hp
             min-hp-units (Array.filter &(fn [u] (= min-hp-ref (Unit.hp u)))
@@ -157,11 +156,13 @@
   (do
     (set! units (Array.sort-by units &compare-pos))
     (for [i 0 (Array.length &units)]
-      (let [new (find-move map &units (Array.nth &units i))]
-        (do
-          (set! units (Array.aset units i @&new))
-          (set! units (attack units &new))
-          (set! units (Array.filter &alive? units)))))
+      (let [old (Array.nth &units i)]
+        (when (alive? old)
+          (let [new (find-move map &units old)]
+            (do
+              (set! units (Array.aset units i @&new))
+              (set! units (attack units &new)))))))
+    (set! units (Array.filter &alive? units))
     units))
 
 ;; TODO to core?
@@ -183,6 +184,24 @@
                 (print* (String.char-at line x)))))
           (println* ""))))))
 
+(defn goblin? [u]
+  (= \G @(Unit.type u)))
+
+(defn part1 [map]
+  (let [units (parse-units map)
+        round -1]
+    (do
+      (while (not (Array.all? &goblin? &units))
+        (do
+          (set! units (tick map units))
+          (set! round (inc round))))
+      (println* round)
+      (println* &units)
+      (println* (* round
+                   (Array.sum
+                    &(Array.copy-map &(fn [u] @(Unit.hp u))
+                                     &units)))))))
+
 (def test-map-movement
   [@"#########"
    @"#G..G..G#"
@@ -194,7 +213,7 @@
    @"#G..G..G#"
    @"#########"])
 
-(def test-map
+(def test-map-1
   [@"#######"
    @"#.G...#"
    @"#...EG#"
@@ -203,13 +222,40 @@
    @"#.....#"
    @"#######"])
 
-(def test-map-ref &test-map)
+(def test-map-2
+  [@"#######"
+   @"#E.G#.#"
+   @"#.#G..#"
+   @"#G.#.G#"
+   @"#G..#.#"
+   @"#...E.#"
+   @"#######"])
+
+(def test-map-3
+  [@"#######"
+   @"#.E...#"
+   @"#.#..G#"
+   @"#.###.#"
+   @"#E#G#G#"
+   @"#...#G#"
+   @"#######"])
+
+(def test-map-4
+  [@"#########"
+   @"#G......#"
+   @"#.E.#...#"
+   @"#..##..G#"
+   @"#...##..#"
+   @"#...#...#"
+   @"#.G...G.#"
+   @"#.....G.#"
+   @"#########"])
 
 (defn main []
-  (let [units (parse-units test-map-ref)]
-    (for [round 0 50]
-      (do
-        (println* round)
-        (println* &units)
-        ;;(draw test-map-ref &units)
-        (set! units (tick test-map-ref units))))))
+  (do
+    (part1 &test-map-1) ;; should be 27730
+    (part1 &test-map-2) ;; should be 27755
+    (part1 &test-map-3) ;; should be 28944
+    (part1 &test-map-4) ;; should be 18740
+    (part1 &the-map) ;; was 228582, too low
+    ))
