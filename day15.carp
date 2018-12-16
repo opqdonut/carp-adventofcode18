@@ -78,7 +78,8 @@
 
 (deftype Unit [type Char
                pos (Pair Int Int)
-               hp Int])
+               hp Int
+               attack Int])
 
 (defmodule UnitRef
   (sig = (Fn [(Ref Unit) (Ref Unit)] Bool))
@@ -98,7 +99,8 @@
                   (String.string-set! line x \.)
                   (set! units (Array.push-back units (Unit.init c
                                                                 (Pair.init x y)
-                                                                200)))))))))
+                                                                200
+                                                                3)))))))))
       units)))
 
 (defn alive? [u]
@@ -139,6 +141,7 @@
 (defn attack [units unit]
   (let [my-pos (Unit.pos unit)
         my-type (Unit.type unit)
+        my-attack @(Unit.attack unit)
         in-range (Array.filter &(fn [u] (and
                                          (and (alive? u)
                                               (not (= my-type (Unit.type u))))
@@ -155,7 +158,7 @@
             selected (Array.first
                       &(Array.sort-by min-hp-units &compare-pos))
             selected-i (Array.index-of &units @&selected)] ;; TODO index-of should take ref
-        (Array.aset units selected-i (Unit.set-hp selected (- min-hp 3)))))))
+        (Array.aset units selected-i (Unit.set-hp selected (- min-hp my-attack)))))))
 
 (defn tick [map units]
   (let [ended false]
@@ -201,6 +204,9 @@
 (defn goblin? [u]
   (= \G @(Unit.type u)))
 
+(defn elf? [u]
+  (= \E @(Unit.type u)))
+
 (defn part1 [map]
   (let [units (parse-units map)
         round 0]
@@ -222,6 +228,48 @@
                    (Array.sum
                     &(Array.copy-map &(fn [u] @(Unit.hp u))
                                      &units)))))))
+
+(defn count-elves [units]
+  (Array.length
+   &(Array.filter &elf? @units)))
+
+(defn upgrade-elves [power units]
+  (Array.copy-map
+   &(fn [u]
+      (if (elf? u)
+        (Unit.set-attack @u power)
+        @u))
+   units))
+
+(defn part2 [map]
+  (let [base-units (parse-units map)
+        n-elves (count-elves &base-units)]
+    (for [power 3 100]
+      (let [units (upgrade-elves power &base-units)
+            win false
+            round 0]
+        (do
+          (while true
+            (let [ended-and-units (tick map @&units) ;; TODO shouldn't need to copy here
+                  ended @(Pair.a &ended-and-units)]
+              (do
+                (set! units @(Pair.b &ended-and-units))
+                (unless (= n-elves (count-elves &units))
+                        (break)) ;;lost
+                (when ended
+                  (do
+                    (set! win true)
+                    (break)))
+                (set! round (inc round))
+                ;;(draw map &units)
+                )))
+          (print* power) (print* ": ") (print* round) (print* " ") (println* win)
+          (println* (* round
+                       (Array.sum
+                        &(Array.copy-map &(fn [u] @(Unit.hp u))
+                                         &units))))
+          (when win
+            (break)))))))
 
 (def test-map-movement
   [@"#########"
@@ -298,12 +346,14 @@
 
 (defn main []
   (do
-    (part1 &test-map-1) ;; should be 27730
-    (part1 &test-map-2) ;; should be 27755
-    (part1 &test-map-3) ;; should be 28944
-    (part1 &test-map-4) ;; should be 18740
-    (part1 &corner-case-1) ;; 67 rounds
-    (part1 &corner-case-2) ;; 71 rounds
+    ;;(part1 &test-map-1) ;; should be 27730
+    ;;(part1 &test-map-2) ;; should be 27755
+    ;;(part1 &test-map-3) ;; should be 28944
+    ;;(part1 &test-map-4) ;; should be 18740
+    ;;(part1 &corner-case-1) ;; 67 rounds
+    ;;(part1 &corner-case-2) ;; 71 rounds
     ;;(part1 &s-case) ;; should move right
-    (part1 &the-map) ;; 237490
+    ;;(part1 &the-map) ;; 237490
+    (part2 &test-map-1) ;; should be 4988
+    (part2 &the-map)
     ))
