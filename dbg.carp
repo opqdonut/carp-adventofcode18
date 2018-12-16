@@ -1,6 +1,7 @@
-(deftype X [x Int])
+(defn pair-arr [arr]
+  (Pair.init 1 arr))
 
 (defn main []
-  (println*
-   &(Array.copy-map &(fn [x] @(X.x x))
-                    &[(X.init 1)])))
+  (let-do [arr [1]]
+    (set! arr @(Pair.b &(pair-arr arr)))
+    (println* &arr)))
