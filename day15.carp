@@ -158,17 +158,26 @@
         (Array.aset units selected-i (Unit.set-hp selected (- min-hp 3)))))))
 
 (defn tick [map units]
-  (do
-    (set! units (Array.sort-by units &compare-pos))
-    (for [i 0 (Array.length &units)]
-      (let [old (Array.nth &units i)]
-        (when (alive? old)
-          (let [new (find-move map &units old)]
+  (let [ended false]
+    (do
+      (set! units (Array.sort-by units &compare-pos))
+      (for [i 0 (Array.length &units)]
+        (let [old (Array.nth &units i)]
+          (when (alive? old)
             (do
-              (set! units (Array.aset units i @&new))
-              (set! units (attack units &new)))))))
-    (set! units (Array.filter &alive? units))
-    units))
+              (when (Array.all? &(fn [u] (or (not (alive? u))
+                                             (= (Unit.type u)
+                                                (Unit.type old))))
+                                &units)
+                (do
+                  (set! ended true)
+                  (break)))
+              (let [new (find-move map &units old)]
+                (do
+                  (set! units (Array.aset units i @&new))
+                  (set! units (attack units &new))))))))
+      (set! units (Array.filter &alive? units))
+      (Pair.init ended units))))
 
 ;; TODO to core?
 (defn zero []
@@ -192,17 +201,20 @@
 (defn goblin? [u]
   (= \G @(Unit.type u)))
 
-;; TODO stop game immediately when a character doesn't find enemies!
 (defn part1 [map]
   (let [units (parse-units map)
-        round -1]
+        round 0]
     (do
       (while (not (Array.all? &goblin? &units))
-        (do
-          (set! units (tick map units))
-          (set! round (inc round))
-          ;;(draw map &units)
-          ))
+        (let [ended-and-units (tick map @&units) ;; TODO shouldn't need to copy here
+              ended @(Pair.a &ended-and-units)]
+          (do
+            (set! units @(Pair.b &ended-and-units))
+            (when ended
+              (break))
+            (set! round (inc round))
+            ;;(draw map &units)
+            )))
       (draw map &units)
       (println* round)
       (println* &units)
@@ -290,8 +302,8 @@
     (part1 &test-map-2) ;; should be 27755
     (part1 &test-map-3) ;; should be 28944
     (part1 &test-map-4) ;; should be 18740
-    ;;(part1 &corner-case-1) ;; 67 rounds
-    ;;(part1 &corner-case-2) ;; 71 rounds
+    (part1 &corner-case-1) ;; 67 rounds
+    (part1 &corner-case-2) ;; 71 rounds
     ;;(part1 &s-case) ;; should move right
-    ;;(part1 &the-map) ;; was 228582, too low
+    (part1 &the-map) ;; 237490
     ))
