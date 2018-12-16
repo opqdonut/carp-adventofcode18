@@ -157,7 +157,7 @@
                                        in-range)
             selected (Array.first
                       &(Array.sort-by min-hp-units &compare-pos))
-            selected-i (Array.index-of &units @&selected)] ;; TODO index-of should take ref
+            selected-i (Array.index-of &units &selected)]
         (Array.aset units selected-i (Unit.set-hp selected (- min-hp my-attack)))))))
 
 (defn tick [map units]
