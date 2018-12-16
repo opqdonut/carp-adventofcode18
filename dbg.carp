@@ -1,7 +1,0 @@
-(defn pair-arr [arr]
-  (Pair.init 1 arr))
-
-(defn main []
-  (let-do [arr [1]]
-    (set! arr @(Pair.b &(pair-arr arr)))
-    (println* &arr)))
