@@ -101,30 +101,37 @@
                                                                 200)))))))))
       units)))
 
+(defn alive? [u]
+  (<= 0 @(Unit.hp u)))
+
 (defn find-move [map units unit]
-  (let [unit-positions (Array.copy-map &(fn [u] @(Unit.pos u)) units)
+  (let [alive (Array.filter &alive? @units)
+        unit-positions (Array.copy-map &(fn [u] @(Unit.pos u)) &alive)
         obstructions (Set.from-array &unit-positions)
         obstructions-ref &obstructions
         free? (fn [c] (and (floor? map c)
                            (not (Set.contains? obstructions-ref c))))
         free?ref &free?
-        targets (concat-map &(fn [u]
-                               (if (= (Unit.type u) (Unit.type unit))
-                                 []
-                                 (neighbours (Unit.pos u))))
-                            units)
+        targets (Set.from-array
+                 &(concat-map &(fn [u]
+                                 (if (= (Unit.type u) (Unit.type unit))
+                                   []
+                                   (neighbours (Unit.pos u))))
+                              &alive))
         possible-next-move? (fn [c] (and (~free?ref c)
-                                         (neighbouring? c (Unit.pos unit))))]
-    (if (Array.any? &(fn [c] (= c (Unit.pos unit)))
-                    &targets)
+                                         (neighbouring? c (Unit.pos unit))))
+        my-pos (Unit.pos unit)]
+    (if (Set.contains? &targets my-pos)
       @unit ;; no need to move
-      (let [free-targets (Array.filter free?ref targets)
-            goal (bfs map &free? &possible-next-move? &free-targets)
-            goal-dist @(Pair.a &goal)
-            goal-coord @(Pair.b &goal)]
-        (if (< goal-dist 0)
+      (let [target? (fn [c] (Set.contains? &targets c))
+            closest-target (bfs map &free? &target? &[@my-pos])
+            closest-target-dist @(Pair.a &closest-target)
+            closest-target-coord @(Pair.b &closest-target)]
+        (if (< closest-target-dist 0)
           @unit ;; can't move
-          (Unit.set-pos @unit goal-coord))))))
+          (let [next-move (bfs map &free? &possible-next-move? &[closest-target-coord])
+                next-move-coord @(Pair.b &next-move)]
+            (Unit.set-pos @unit next-move-coord)))))))
 
 (defn compare-pos [u1 u2]
   (compare-coord (Unit.pos u1) (Unit.pos u2)))
@@ -133,7 +140,8 @@
   (let [my-pos (Unit.pos unit)
         my-type (Unit.type unit)
         in-range (Array.filter &(fn [u] (and
-                                         (not (= my-type (Unit.type u)))
+                                         (and (alive? u)
+                                              (not (= my-type (Unit.type u))))
                                          (neighbouring? my-pos (Unit.pos u))))
                                @&units)
         get-hp (fn [u] @(Unit.hp u))] ;; need to name this because of #361
@@ -148,9 +156,6 @@
                       &(Array.sort-by min-hp-units &compare-pos))
             selected-i (Array.index-of &units @&selected)] ;; TODO index-of should take ref
         (Array.aset units selected-i (Unit.set-hp selected (- min-hp 3)))))))
-
-(defn alive? [u]
-  (<= 0 @(Unit.hp u)))
 
 (defn tick [map units]
   (do
@@ -187,6 +192,7 @@
 (defn goblin? [u]
   (= \G @(Unit.type u)))
 
+;; TODO stop game immediately when a character doesn't find enemies!
 (defn part1 [map]
   (let [units (parse-units map)
         round -1]
@@ -194,7 +200,10 @@
       (while (not (Array.all? &goblin? &units))
         (do
           (set! units (tick map units))
-          (set! round (inc round))))
+          (set! round (inc round))
+          ;;(draw map &units)
+          ))
+      (draw map &units)
       (println* round)
       (println* &units)
       (println* (* round
@@ -251,11 +260,38 @@
    @"#.....G.#"
    @"#########"])
 
+(def corner-case-1
+  [@"####"
+   @"##E#"
+   @"#GG#"
+   @"####"])
+
+(def corner-case-2
+  [@"#####"
+   @"#GG##"
+   @"#.###"
+   @"#..E#"
+   @"#.#G#"
+   @"#.E##"
+   @"#####"])
+
+(def s-case
+  [@"#######"
+   @"#G....#"
+   @"#####.#"
+   @"#..E..#"
+   @"#.#####"
+   @"#...G.#"
+   @"#######"])
+
 (defn main []
   (do
     (part1 &test-map-1) ;; should be 27730
     (part1 &test-map-2) ;; should be 27755
     (part1 &test-map-3) ;; should be 28944
     (part1 &test-map-4) ;; should be 18740
-    (part1 &the-map) ;; was 228582, too low
+    ;;(part1 &corner-case-1) ;; 67 rounds
+    ;;(part1 &corner-case-2) ;; 71 rounds
+    ;;(part1 &s-case) ;; should move right
+    ;;(part1 &the-map) ;; was 228582, too low
     ))
