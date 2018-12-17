@@ -1,5 +1,6 @@
 (def in-lines (Array.pop-back (String.lines &(IO.read-file "../input.16.txt"))))
 (def sample-lines (Array.subarray &in-lines 0 3189))
+(def program-lines (Array.subarray &in-lines 3190 4140))
 
 (defn parse-int [str-ref]
   (let [clean (Pattern.substitute #"[^0-9]" str-ref "" -1)]
@@ -148,9 +149,72 @@
                             @&samples))]
     (println* ans)))
 
+(defn compatible-opcodes []
+  (let [opcodes (Array.replicate 16 &@&op-names)]
+    (do
+      (foreach [s &samples]
+        (let [code (Array.first (Sample.op s))
+              compatible-with-s (fn [name] (compatible? s (str-to-op name)))]
+          (set! opcodes
+                (Array.aupdate opcodes code
+                               &(fn [possible] (Array.filter &compatible-with-s
+                                                             @possible))))))
+      opcodes)))
+
+;; TODO move to core
+(defn find-index [arr pred]
+  (let [ind -1]
+    (do
+      (for [i 0 (Array.length arr)]
+        (when (~pred (Array.nth arr i))
+          (do
+            (set! ind i)
+            (break))))
+      ind)))
+
+(defn solve-opcodes [compatibles]
+  (let [single? (fn [arr] (= (Array.length arr) 1))
+        result {}]
+    (do
+      (while true
+        (let [i (find-index &compatibles &single?)]
+          (do
+            (when (> 0 i)
+              (break))
+            (let [answer &(Array.first (Array.nth &compatibles i))
+                  is-not-answer (fn [x] (not (= x answer)))]
+              (do
+                (set! result (Map.put result &i answer))
+                (set! compatibles (Array.endo-map &(fn [names] (Array.filter &is-not-answer
+                                                                             names))
+                                                  compatibles)))))))
+      result)))
+
+(def program
+  (Array.copy-map &(fn [s] (Array.copy-map &parse-int &(words s)))
+                  &program-lines))
+
+(defn run-program [opcodes ops]
+  (let [regs [0 0 0 0]]
+    (do
+      (foreach [op ops]
+        (let [opcode (Array.first op)
+              a @(Array.nth op 1)
+              b @(Array.nth op 2)
+              c @(Array.nth op 3)
+              f (str-to-op &(Map.get opcodes &opcode))]
+          (set! regs (f &regs a b c))))
+      regs)))
+
+(defn part2 []
+  (let [opcodes (solve-opcodes (compatible-opcodes))]
+    (do
+      (println* &(run-program &opcodes &program)))))
+
 (defn main []
   (do
     ;;(println* &samples)
     (test)
     (part1)
+    (part2)
     ))
