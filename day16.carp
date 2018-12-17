@@ -48,6 +48,7 @@
 (defn i-op [op in a b c]
   (write in c (op (reg in a) b)))
 
+;; due to #364 can't do something like (def addr (r-op +))
 (defn addr [in a b c] (r-op + in a b c))
 (defn addi [in a b c] (i-op + in a b c))
 (defn mulr [in a b c] (r-op * in a b c))
@@ -84,6 +85,7 @@
 (defn eqrr [in a b c]
   (write in c (b01 (= (reg in a) (reg in b)))))
 
+;; #365: Arrays of functions don't work now unfortunately
 ;;(def ops [addr addi mulr muli banr bani borr bori setr seti
 ;;          gtir gtri gtrr
 ;;          eqir eqri eqrr])
@@ -105,25 +107,29 @@
       (= (Sample.out sample)
          &out))))
 
+;; collections of functions would be nice
+(def op-names [@"addr" @"addi" @"mulr" @"muli"
+               @"banr" @"bani" @"borr" @"bori"
+               @"setr" @"seti"
+               @"gtir" @"gtri" @"gtrr"
+               @"eqir" @"eqri" @"eqrr"])
+
+(defn str-to-op [name]
+  (let [ind (Array.index-of &op-names name)]
+    (case ind
+      0 addr 1 addi 2 mulr 3 muli
+      4 banr 5 bani 6 borr 7 bori
+      8 setr 9 seti
+      10 gtir 11 gtri 12 gtrr
+      13 eqir 14 eqri 15 eqrr
+      (do
+        (assert false)
+        addr))))
+
 (defn n-compatible [sample]
   (Array.length
-   &(Array.filter &(fn [b] @b)
-                  [(compatible? sample addr)
-                   (compatible? sample addi)
-                   (compatible? sample mulr)
-                   (compatible? sample muli)
-                   (compatible? sample banr)
-                   (compatible? sample bani)
-                   (compatible? sample borr)
-                   (compatible? sample bori)
-                   (compatible? sample setr)
-                   (compatible? sample seti)
-                   (compatible? sample gtir)
-                   (compatible? sample gtri)
-                   (compatible? sample gtrr)
-                   (compatible? sample eqir)
-                   (compatible? sample eqri)
-                   (compatible? sample eqrr)])))
+   &(Array.filter &(fn [nam] (compatible? sample (str-to-op nam)))
+                  @&op-names)))
 
 (defn test []
   (let [sample &(Sample.init [3 2 1 1] [9 2 1 2] [3 2 2 1])]
