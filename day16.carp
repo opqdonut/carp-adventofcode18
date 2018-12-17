@@ -1,0 +1,150 @@
+(def in-lines (Array.pop-back (String.lines &(IO.read-file "../input.16.txt"))))
+(def sample-lines (Array.subarray &in-lines 0 3189))
+
+(defn parse-int [str-ref]
+  (let [clean (Pattern.substitute #"[^0-9]" str-ref "" -1)]
+    (Int.from-string &clean)))
+
+(deftype Sample [in (Array Int)
+                 op (Array Int)
+                 out (Array Int)])
+
+(defn parse [ls]
+  (let [ret []
+        i 0]
+    (do
+      (while (< (+ i 3) (Array.length ls))
+        (let [in-ws &(words (Array.nth ls i))
+              op-ws &(words (Array.nth ls (+ i 1)))
+              out-ws &(words (Array.nth ls (+ i 2)))
+              in [(parse-int (Array.nth in-ws 1))
+                  (parse-int (Array.nth in-ws 2))
+                  (parse-int (Array.nth in-ws 3))
+                  (parse-int (Array.nth in-ws 4))]
+              op (Array.copy-map &parse-int op-ws)
+              out [(parse-int (Array.nth out-ws 2))
+                   (parse-int (Array.nth out-ws 3))
+                   (parse-int (Array.nth out-ws 4))
+                   (parse-int (Array.nth out-ws 5))]
+              sample (Sample.init in op out)]
+          (do
+            (set! ret (Array.push-back ret sample))
+            (set! i (+ i 4)))))
+      ret)))
+
+(def samples (parse &sample-lines))
+
+;; instructions
+
+(defn reg [in i]
+  @(Array.nth in i)) ;; TODO might overflow
+
+(defn write [in i val]
+  (Array.aset @in i val)) ;; TODO might overflow
+
+(defn r-op [op in a b c]
+  (write in c (op (reg in a) (reg in b))))
+
+(defn i-op [op in a b c]
+  (write in c (op (reg in a) b)))
+
+(defn addr [in a b c] (r-op + in a b c))
+(defn addi [in a b c] (i-op + in a b c))
+(defn mulr [in a b c] (r-op * in a b c))
+(defn muli [in a b c] (i-op * in a b c))
+(defn banr [in a b c] (r-op Int.bit-and in a b c))
+(defn bani [in a b c] (i-op Int.bit-and in a b c))
+(defn borr [in a b c] (r-op Int.bit-or in a b c))
+(defn bori [in a b c] (i-op Int.bit-or in a b c))
+
+(defn setr [in a _b c]
+  (write in c (reg in a)))
+
+(defn seti [in a _b c]
+  (write in c a))
+
+(defn b01 [b]
+  (if b 1 0))
+
+(defn gtir [in a b c]
+  (write in c (b01 (> a (reg in b)))))
+
+(defn gtri [in a b c]
+  (write in c (b01 (> (reg in a) b))))
+
+(defn gtrr [in a b c]
+  (write in c (b01 (> (reg in a) (reg in b)))))
+
+(defn eqir [in a b c]
+  (write in c (b01 (= a (reg in b)))))
+
+(defn eqri [in a b c]
+  (write in c (b01 (= (reg in a) b))))
+
+(defn eqrr [in a b c]
+  (write in c (b01 (= (reg in a) (reg in b)))))
+
+;;(def ops [addr addi mulr muli banr bani borr bori setr seti
+;;          gtir gtri gtrr
+;;          eqir eqri eqrr])
+
+;; instructions end
+
+(sig compatible? (Fn [&Sample (Fn [&(Array Int) Int Int Int] (Array Int))]
+                     Bool))
+(defn compatible? [sample op]
+  (let [args (Sample.op sample)
+        a @(Array.nth args 1)
+        b @(Array.nth args 2)
+        c @(Array.nth args 3)
+        out (op (Sample.in sample) a b c)]
+    (do
+      ;;(print* (Sample.in sample))
+      ;;(print* (Sample.op sample))
+      ;;(println* &out)
+      (= (Sample.out sample)
+         &out))))
+
+(defn n-compatible [sample]
+  (Array.length
+   &(Array.filter &(fn [b] @b)
+                  [(compatible? sample addr)
+                   (compatible? sample addi)
+                   (compatible? sample mulr)
+                   (compatible? sample muli)
+                   (compatible? sample banr)
+                   (compatible? sample bani)
+                   (compatible? sample borr)
+                   (compatible? sample bori)
+                   (compatible? sample setr)
+                   (compatible? sample seti)
+                   (compatible? sample gtir)
+                   (compatible? sample gtri)
+                   (compatible? sample gtrr)
+                   (compatible? sample eqir)
+                   (compatible? sample eqri)
+                   (compatible? sample eqrr)])))
+
+(defn test []
+  (let [sample &(Sample.init [3 2 1 1] [9 2 1 2] [3 2 2 1])]
+    (do
+      (println* (compatible? sample mulr))
+      (println* (compatible? sample addi))
+      (println* (compatible? sample seti))
+      (println* (compatible? sample addr))
+      (println* (compatible? sample setr))
+      (println* (n-compatible sample))
+      )))
+
+(defn part1 []
+  (let [ans (Array.length
+             &(Array.filter &(fn [sample] (>= (n-compatible sample) 3))
+                            @&samples))]
+    (println* ans)))
+
+(defn main []
+  (do
+    ;;(println* &samples)
+    (test)
+    (part1)
+    ))
