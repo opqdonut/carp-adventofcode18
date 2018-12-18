@@ -1,0 +1,94 @@
+(def in-lines (Array.pop-back (String.lines &(IO.read-file "../input.18.txt"))))
+
+(defn parse [ls]
+  (let [ret {}]
+    (do
+      (for [y 0 (Array.length ls)]
+        (let [line (Array.nth ls y)]
+          (for [x 0 (String.length line)]
+            (set! ret (Map.put ret &(Pair.init x y) &(String.char-at line x))))))
+      ret)))
+
+(def the-map (parse &in-lines))
+
+(def test-map
+  (parse
+   &[@".#.#...|#."
+     @".....#|##|"
+     @".|..|...#."
+     @"..|#.....#"
+     @"#.#|||#|#|"
+     @"...#.||..."
+     @".|....|..."
+     @"||...#|.#|"
+     @"|.||||..|."
+     @"...#.|..|."]))
+
+(defn zero []
+  \x)
+
+(defn neighbours [map coord]
+  (let [x @(Pair.a coord)
+        y @(Pair.b coord)]
+    [(Map.get map &(Pair.init (dec x) (dec y)))
+     (Map.get map &(Pair.init x (dec y)))
+     (Map.get map &(Pair.init (inc x) (dec y)))
+     (Map.get map &(Pair.init (dec x) y))
+     (Map.get map &(Pair.init (inc x) y))
+     (Map.get map &(Pair.init (dec x) (inc y)))
+     (Map.get map &(Pair.init x (inc y)))
+     (Map.get map &(Pair.init (inc x) (inc y)))]))
+
+(defn count-neighbours [map coord type]
+  (Array.length
+   &(Array.filter &(fn [t] (= t &type))
+                  (neighbours map coord))))
+
+(defn evolve-point [map coord]
+  (let [current (Map.get map coord)
+        trees (count-neighbours map coord \|)
+        lumber (count-neighbours map coord \#)]
+    (case current
+      \. (if (<= 3 trees) \| \.)
+      \| (if (<= 3 lumber) \# \|)
+      \# (if (and (<= 1 lumber)
+                  (<= 1 trees))
+           \#
+           \.)
+      current)))
+
+(defn evolve [map size]
+  (let [new-map {}]
+    (do
+      (for [x 0 size]
+        (for [y 0 size]
+          (let [coord (Pair.init x y)]
+            (set! new-map (Map.put new-map &coord &(evolve-point map &coord))))))
+      new-map)))
+
+(defn draw [map size]
+  (for [y 0 size]
+    (do
+      (for [x 0 size]
+        (let [coord (Pair.init x y)]
+          (print* (Map.get map &coord))))
+      (println* ""))))
+
+(defn part1 []
+  (let [map @&the-map
+        siz 50]
+    (do
+      (for [_ 0 10]
+        (do
+          (set! map (evolve &map siz))
+          ;;(draw &map siz)
+          ;;(println* "")
+          ))
+      (let [resources (Map.vals &map)
+            lumber (Array.element-count &resources &\#)
+            trees (Array.element-count &resources &\|)]
+        (println* (* lumber trees))))))
+
+(defn main []
+  (do
+    (part1)))
