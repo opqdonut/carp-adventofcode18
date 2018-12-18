@@ -40,9 +40,8 @@
      (Map.get map &(Pair.init (inc x) (inc y)))]))
 
 (defn count-neighbours [map coord type]
-  (Array.length
-   &(Array.filter &(fn [t] (= t &type))
-                  (neighbours map coord))))
+  (Array.element-count &(neighbours map coord)
+                       &type))
 
 (defn evolve-point [map coord]
   (let [current (Map.get map coord)
@@ -74,22 +73,65 @@
           (print* (Map.get map &coord))))
       (println* ""))))
 
-(defn part2 []
+(defn part1 [steps]
   (let [map @&the-map
         siz 50]
     (do
-      (for [_ 0 1000] ;; this is enough for the forest to reach a cyclic steady state
+      (for [_ 0 steps]
         (do
           (set! map (evolve &map siz))
-          (draw &map siz)
-          (println* "")
+          ;;(draw &map siz)
+          ;;(println* "")
           ))
       (let [resources (Map.vals &map)
             lumber (Array.element-count &resources &\#)
             trees (Array.element-count &resources &\|)]
         (println* (* lumber trees))))))
 
+;; TODO to core
+(defn = [m1 m2]
+  (and (= (Map.length m1) (Map.length m2))
+       (Map.kv-reduce (fn [b k v] (and b (= v &(Map.get m2 k))))
+                      true
+                      m1)))
+
+(defn find-cycle [init siz]
+  (let [t-hare 0
+        t-tortoise 0
+        hare @init
+        tortoise @init
+        go-tortoise false]
+    (do
+      (for [_ 0 1000]
+        (do
+          (when go-tortoise
+            (do
+              (set! tortoise (evolve &tortoise siz))
+              (set! t-tortoise (Int.inc t-tortoise))))
+          (set! go-tortoise (Bool.not go-tortoise))
+          (set! hare (evolve &hare siz))
+          (set! t-hare (Int.inc t-hare))
+          ;;(println* (Set.length &hare))
+          ;;(println* &hare)
+          (when (= &tortoise &hare)
+            (break))))
+      (Pair.init t-tortoise t-hare))))
+
+(defn part2 []
+  (let [target 1000000000l
+        cycle (find-cycle &the-map 50)
+        start (Long.from-int @(Pair.a &cycle))
+        end (Long.from-int @(Pair.b &cycle))
+        len (- end start)
+        to-go (Long.mod (- target start) len)
+        total (Long.to-int (+ start to-go))]
+    (do
+      ;;(println* &cycle)
+      ;;(println* total)
+      (part1 total))))
+
 (defn main []
   (do
+    (part1 20)
     (part2)
     ))
