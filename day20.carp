@@ -1,0 +1,81 @@
+(defn push-back-maybe [arr x]
+  (if (< (Array.index-of &arr x) 0)
+    (Array.push-back arr @x)
+    arr))
+
+(defn add-edge [m c1 c2]
+  (let [n1 (Map.get &m c1)
+        n2 (Map.get &m c2)]
+    (Map.put (Map.put m c1 &(push-back-maybe n1 c2))
+             c2 &(push-back-maybe n2 c1))))
+
+(defn move [c dir]
+  (case dir
+    \N (Pair.update-b c &dec)
+    \S (Pair.update-b c &inc)
+    \W (Pair.update-a c &dec)
+    \E (Pair.update-a c &inc)
+    c))
+
+(defn add-door [m c1 dir]
+  (add-edge m c1 &(move @c1 dir)))
+
+(defn subregexes [regex ind]
+  (let [c 0
+        prev-start (inc ind)
+        slices []
+        slice-found false
+        end false
+        end-i -1]
+    (do
+      (for [i (inc ind) (String.length regex)]
+        (do
+          (print* c) (print* (String.char-at regex i)) (println* i)
+          (case (String.char-at regex i)
+            \( (set! c (inc c))
+            \) (do
+                 (set! c (dec c))
+                 (when (< c 0)
+                   (do
+                     (set! slice-found true)
+                     (set! end true))))
+            \| (when (= c 0)
+                 (set! slice-found true))
+            ())
+          (when slice-found
+            (do
+              (set! slice-found false)
+              (set! slices (Array.push-back slices (String.substring regex prev-start i)))
+              (set! prev-start (inc i))))
+          (when end
+            (do
+              (set! end-i i)
+              (break)))))
+      (Pair.init end-i slices))))
+
+(defn test-subregexes []
+  (do
+    (println* &(subregexes "(ab(cd|ef)|gh(ji)|exyz||w)" 0))
+    (println* &(subregexes "(ab(cd|ef)|gh(ji)|exyz||w)" 3))))
+
+;; (defn walk [m ps regex ind]
+;;   (if (>= ind (String.length regex))
+;;     ps
+;;     (let [ch (String.char-at regex ind)]
+;;       (case ch
+;;         \(
+;;         (let [ind-and-slices (subregexes regex ind)
+;;               ind @(Pair.a ind-and-slices)
+;;               slices (Pair.b slices)]
+;;           (foreach [slice slices]
+;;             (set! pos (walk m pos slice 0))
+;;             (walk m pos
+;;         ;; default: move
+;;         (walk (add-door m pos ch)
+;;               (move pos ch)
+;;               regex
+;;               (inc ind)))))
+
+(defn main []
+  (do
+    (test-subregexes)))
