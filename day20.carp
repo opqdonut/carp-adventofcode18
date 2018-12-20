@@ -38,7 +38,7 @@
     (do
       (for [i (inc ind) (String.length regex)]
         (do
-          (print* c) (print* (String.char-at regex i)) (println* i)
+          ;;(print* c) (print* (String.char-at regex i)) (println* i)
           (case (String.char-at regex i)
             \( (set! c (inc c))
             \) (do
@@ -57,7 +57,7 @@
               (set! prev-start (inc i))))
           (when end
             (do
-              (set! end-i i)
+              (set! end-i (inc i))
               (break)))))
       (Pair.init end-i slices))))
 
@@ -94,13 +94,17 @@
                 new-poss (the (Array (Pair Int Int)) [])]
             (do
               (foreach [slice slices]
-                (let [result (walk @&m @&poss slice 0) ;; shouldn't need to copy m here...
+                (let [_1 (print* "SLICE ")
+                      _2 (println* slice)
+                      result (walk @&m @&poss slice 0) ;; shouldn't need to copy m here...
                       result-m (Pair.a &result)
                       result-poss (Pair.b &result)]
                   (do
+                    (println* result-poss)
+                    (println* new-ind)
                     (set! new-poss (push-back-all new-poss result-poss))
                     (set! m @result-m))))
-              (walk m &new-poss regex new-ind)))
+              (walk m new-poss regex new-ind)))
           ;; default: move
           (walk (add-all-doors m &poss ch)
                 (move-all &poss ch)
@@ -113,7 +117,7 @@
         xs (Array.copy-map &(fn [c] @(Pair.a c)) &coords)
         min-x (Array.minimum &xs)
         max-x (inc (Array.maximum &xs))
-        ys (Array.copy-map &(fn [c] @(Pair.a c)) &coords)
+        ys (Array.copy-map &(fn [c] @(Pair.b c)) &coords)
         min-y (Array.minimum &ys)
         max-y (inc (Array.maximum &ys))
         neigh? (fn [c1 c2]
@@ -141,5 +145,7 @@
 (defn main []
   (do
     (test-subregexes)
-    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "WNE" 0)))
+    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "WNEESSWWWNNN" 0)))
+    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "ENWWW(NEEE|SSE(EE|N))" 0)))
+    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN" 0)))
     ))
