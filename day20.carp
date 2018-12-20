@@ -17,8 +17,16 @@
     \E (Pair.update-a c &inc)
     c))
 
+(defn move-all [cs dir]
+  (Array.copy-map &(fn [c] (move @c dir)) cs))
+
 (defn add-door [m c1 dir]
   (add-edge m c1 &(move @c1 dir)))
+
+(defn add-all-doors [m cs dir]
+  (Array.reduce &(fn [m c] (add-door m c dir))
+                m
+                cs))
 
 (defn subregexes [regex ind]
   (let [c 0
@@ -58,24 +66,80 @@
     (println* &(subregexes "(ab(cd|ef)|gh(ji)|exyz||w)" 0))
     (println* &(subregexes "(ab(cd|ef)|gh(ji)|exyz||w)" 3))))
 
-;; (defn walk [m ps regex ind]
-;;   (if (>= ind (String.length regex))
-;;     ps
-;;     (let [ch (String.char-at regex ind)]
-;;       (case ch
-;;         \(
-;;         (let [ind-and-slices (subregexes regex ind)
-;;               ind @(Pair.a ind-and-slices)
-;;               slices (Pair.b slices)]
-;;           (foreach [slice slices]
-;;             (set! pos (walk m pos slice 0))
-;;             (walk m pos
-;;         ;; default: move
-;;         (walk (add-door m pos ch)
-;;               (move pos ch)
-;;               regex
-;;               (inc ind)))))
+(sig push-back-all (Fn [(Array a) (Ref (Array a))] (Array a)))
+(defn push-back-all [arr elts]
+  (Array.reduce &(fn [arr el] (Array.push-back arr @el))
+                arr
+                elts))
+
+(sig walk (Fn [(Map (Pair Int Int) (Array (Pair Int Int)))
+               (Array (Pair Int Int))
+               &String
+               Int]
+              (Pair (Map (Pair Int Int) (Array (Pair Int Int)))
+                    (Array (Pair Int Int)))))
+(defn walk [m poss regex ind]
+  (do
+    (print* "WALK ")
+    (print* ind)
+    (println* &poss)
+    (if (>= ind (String.length regex))
+      (Pair.init m poss)
+      (let [ch (String.char-at regex ind)]
+        (case ch
+          \(
+          (let [ind-and-slices (subregexes regex ind)
+                new-ind @(Pair.a &ind-and-slices)
+                slices (Pair.b &ind-and-slices)
+                new-poss (the (Array (Pair Int Int)) [])]
+            (do
+              (foreach [slice slices]
+                (let [result (walk @&m @&poss slice 0) ;; shouldn't need to copy m here...
+                      result-m (Pair.a &result)
+                      result-poss (Pair.b &result)]
+                  (do
+                    (set! new-poss (push-back-all new-poss result-poss))
+                    (set! m @result-m))))
+              (walk m &new-poss regex new-ind)))
+          ;; default: move
+          (walk (add-all-doors m &poss ch)
+                (move-all &poss ch)
+                regex
+                (inc ind)))))))
+
+(sig draw-doors (Fn [(Ref (Map (Pair Int Int) (Array (Pair Int Int))))] ()))
+(defn draw-doors [g]
+  (let [coords (Map.keys g)
+        xs (Array.copy-map &(fn [c] @(Pair.a c)) &coords)
+        min-x (Array.minimum &xs)
+        max-x (inc (Array.maximum &xs))
+        ys (Array.copy-map &(fn [c] @(Pair.a c)) &coords)
+        min-y (Array.minimum &ys)
+        max-y (inc (Array.maximum &ys))
+        neigh? (fn [c1 c2]
+                 (<= 0 (Array.index-of &(Map.get g c1) c2)))
+        pict (Array.replicate (* 2 (- max-y min-y)) &(Array.replicate (* 2 (- max-x min-x)) &\#))]
+    (do
+      (for [y min-y max-y]
+        (for [x min-x max-x]
+          (Array.aset! (Array.nth &pict (* 2 (- y min-y)))
+                       (* 2 (- x min-x))
+                       \.)))
+      (foreach [c1 &coords]
+        (foreach [c2 &(Map.get g c1)]
+          (when (neigh? c1 c2)
+            (let [x (- (+ @(Pair.a c1) @(Pair.a c2)) (* 2 min-x))
+                  y (- (+ @(Pair.b c1) @(Pair.b c2)) (* 2 min-y))
+                  row (Array.nth &pict y)]
+             (Array.aset! row x \|)))))
+      (foreach [row &pict]
+        (do
+          (foreach [ch row]
+            (print* @ch))
+          (println* ""))))))
 
 (defn main []
   (do
-    (test-subregexes)))
+    (test-subregexes)
+    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "WNE" 0)))
+    ))
