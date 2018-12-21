@@ -83,15 +83,14 @@
     ;;(print* "WALK ")
     ;;(print* ind)
     ;;(println* &poss)
-    (if (>= ind (String.length regex))
-      (Pair.init m poss)
+    (while (< ind (String.length regex))
       (let [ch (String.char-at regex ind)
             ;;_ (do (print* ch) (println* ind))
             ]
         (case ch
-          \^ (walk m poss regex (inc ind))
-          \$ (walk m poss regex (inc ind))
-          \newline (walk m &poss regex (inc ind))
+          \^ (set! ind (inc ind))
+          \$ (set! ind (inc ind))
+          \newline (set! ind (inc ind))
           \(
           (let [ind-and-slices (subregexes regex ind)
                 new-ind @(Pair.a &ind-and-slices)
@@ -110,13 +109,14 @@
                     (set! new-poss (push-back-all new-poss result-poss))
                     (set! m @result-m))))
               ;; deduplicate
-              (set! new-poss (Set.to-array &(Set.from-array &new-poss)))
-              (walk m new-poss regex new-ind)))
+              (set! poss (Set.to-array &(Set.from-array &new-poss)))
+              (set! ind new-ind)))
           ;; default: move
-          (walk (add-all-doors m &poss ch)
-                (move-all &poss ch)
-                regex
-                (inc ind)))))))
+          (do
+            (set! ind (inc ind))
+            (set! m (add-all-doors m &poss ch))
+            (set! poss (move-all &poss ch))))))
+    (Pair.init m poss)))
 
 (sig draw-doors (Fn [(Ref (Map (Pair Int Int) (Array (Pair Int Int))))] ()))
 (defn draw-doors [g]
@@ -172,6 +172,7 @@
 (defn part1 [regex]
   (let [doors (Pair.a &(walk (Map.create-with-len 100000) [(Pair.init 0 0)] regex 0))]
     (do
+      ;;(draw-doors doors)
       (println* "DOORS DONE")
       (println* (bfs doors)))))
 
@@ -183,7 +184,7 @@
     ;;(part1 "WNEESSWWWNNN")
     ;;(part1 "ENWWW(NEEE|SSE(EE|N))")
     ;;(part1 "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN")
-    (part1 "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$")
-    (part1 "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$")
+    ;;(part1 "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$")
+    ;;(part1 "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$")
     (part1 &input)
     ))
