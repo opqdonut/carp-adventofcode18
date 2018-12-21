@@ -149,44 +149,37 @@
             (print* @ch))
           (println* ""))))))
 
+(defn new-neighbours [doors visited nodes]
+  (let [not-visited &(fn [c] (not (Set.contains? visited c)))]
+    (Array.reduce &(fn [arr c]
+                     (push-back-all
+                      arr
+                      &(Array.filter not-visited (Map.get doors c))))
+                  []
+                  nodes)))
+
 (defn bfs [doors]
-  (let [edge [(Pair.init 0 0)]
-        visited (Set.create)
+  (let [new [(Pair.init 0 0)]
+        visited (Set.create-with-len 10000)
         dist 0]
     (do
-      (while (not (Array.empty? &edge))
-        (let [visited-ref &visited
-              not-visited &(fn [c2] (not (Set.contains? visited-ref c2)))
-              neighs (Array.reduce &(fn [arr c]
-                                      (push-back-all
-                                       arr
-                                       &(Array.filter not-visited (Map.get doors c))))
-                                   []
-                                   &edge)]
-          (do
-            (set! visited (Array.reduce &Set.put visited &edge))
-            (set! edge neighs)
-            (set! dist (inc dist)))))
+      (while (not (Array.empty? &new))
+        (do
+          (set! new (new-neighbours doors &visited &new))
+          (set! visited (Array.reduce &Set.put visited &new))
+          (set! dist (inc dist))))
       (dec dist))))
 
 (defn bfs-count [doors limit]
-  (let [edge [(Pair.init 0 0)]
-        visited (Set.create)
+  (let [new [(Pair.init 0 0)]
+        visited (Set.create-with-len 10000)
         dist 0]
     (do
       (while (< dist limit)
-        (let [visited-ref &visited
-              not-visited &(fn [c2] (not (Set.contains? visited-ref c2)))
-              neighs (Array.reduce &(fn [arr c]
-                                      (push-back-all
-                                       arr
-                                       &(Array.filter not-visited (Map.get doors c))))
-                                   []
-                                   &edge)]
-          (do
-            (set! visited (Array.reduce &Set.put visited &edge))
-            (set! edge neighs)
-            (set! dist (inc dist)))))
+        (do
+          (set! visited (Array.reduce &Set.put visited &new))
+          (set! new (new-neighbours doors &visited &new))
+          (set! dist (inc dist))))
       (- (Map.length doors) (Set.length &visited)))))
 
 (defn part12 [regex]
