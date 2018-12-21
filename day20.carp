@@ -80,13 +80,18 @@
                     (Array (Pair Int Int)))))
 (defn walk [m poss regex ind]
   (do
-    (print* "WALK ")
-    (print* ind)
-    (println* &poss)
+    ;;(print* "WALK ")
+    ;;(print* ind)
+    ;;(println* &poss)
     (if (>= ind (String.length regex))
       (Pair.init m poss)
-      (let [ch (String.char-at regex ind)]
+      (let [ch (String.char-at regex ind)
+            ;;_ (do (print* ch) (println* ind))
+            ]
         (case ch
+          \^ (walk m poss regex (inc ind))
+          \$ (walk m poss regex (inc ind))
+          \newline (walk m &poss regex (inc ind))
           \(
           (let [ind-and-slices (subregexes regex ind)
                 new-ind @(Pair.a &ind-and-slices)
@@ -94,16 +99,18 @@
                 new-poss (the (Array (Pair Int Int)) [])]
             (do
               (foreach [slice slices]
-                (let [_1 (print* "SLICE ")
-                      _2 (println* slice)
+                (let [;;_1 (print* "SLICE ")
+                      ;;_2 (println* slice)
                       result (walk @&m @&poss slice 0) ;; shouldn't need to copy m here...
                       result-m (Pair.a &result)
                       result-poss (Pair.b &result)]
                   (do
-                    (println* result-poss)
-                    (println* new-ind)
+                    ;;(println* result-poss)
+                    ;;(println* new-ind)
                     (set! new-poss (push-back-all new-poss result-poss))
                     (set! m @result-m))))
+              ;; deduplicate
+              (set! new-poss (Set.to-array &(Set.from-array &new-poss)))
               (walk m new-poss regex new-ind)))
           ;; default: move
           (walk (add-all-doors m &poss ch)
@@ -142,10 +149,41 @@
             (print* @ch))
           (println* ""))))))
 
+(defn bfs [doors]
+  (let [edge [(Pair.init 0 0)]
+        visited (Set.create)
+        dist 0]
+    (do
+      (while (not (Array.empty? &edge))
+        (let [visited-ref &visited
+              not-visited &(fn [c2] (not (Set.contains? visited-ref c2)))
+              neighs (Array.reduce &(fn [arr c]
+                                      (push-back-all
+                                       arr
+                                       &(Array.filter not-visited (Map.get doors c))))
+                                   []
+                                   &edge)]
+          (do
+            (set! visited (Array.reduce &Set.put visited &edge))
+            (set! edge neighs)
+            (set! dist (inc dist)))))
+      (dec dist))))
+
+(defn part1 [regex]
+  (let [doors (Pair.a &(walk (Map.create-with-len 100000) [(Pair.init 0 0)] regex 0))]
+    (do
+      (println* "DOORS DONE")
+      (println* (bfs doors)))))
+
+(def input (IO.read-file "../input.20.txt"))
+
 (defn main []
   (do
     (test-subregexes)
-    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "WNEESSWWWNNN" 0)))
-    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "ENWWW(NEEE|SSE(EE|N))" 0)))
-    (draw-doors (Pair.a &(walk (Map.create) [(Pair.init 0 0)] "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN" 0)))
+    ;;(part1 "WNEESSWWWNNN")
+    ;;(part1 "ENWWW(NEEE|SSE(EE|N))")
+    ;;(part1 "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN")
+    (part1 "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$")
+    (part1 "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$")
+    (part1 &input)
     ))
