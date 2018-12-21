@@ -1,0 +1,118 @@
+;;;; copypaste from day 19
+
+(defn reg [in i]
+  @(Array.nth in i))
+
+(defn write [in i val]
+  (Array.aset @in i val))
+
+(defn r-op [op in a b c]
+  (write in c (op (reg in a) (reg in b))))
+
+(defn i-op [op in a b c]
+  (write in c (op (reg in a) b)))
+
+(defn addr [in a b c] (r-op + in a b c))
+(defn addi [in a b c] (i-op + in a b c))
+(defn mulr [in a b c] (r-op * in a b c))
+(defn muli [in a b c] (i-op * in a b c))
+(defn banr [in a b c] (r-op Int.bit-and in a b c))
+(defn bani [in a b c] (i-op Int.bit-and in a b c))
+(defn borr [in a b c] (r-op Int.bit-or in a b c))
+(defn bori [in a b c] (i-op Int.bit-or in a b c))
+
+(defn setr [in a _b c]
+  (write in c (reg in a)))
+
+(defn seti [in a _b c]
+  (write in c a))
+
+(defn b01 [b]
+  (if b 1 0))
+
+(defn gtir [in a b c]
+  (write in c (b01 (> a (reg in b)))))
+
+(defn gtri [in a b c]
+  (write in c (b01 (> (reg in a) b))))
+
+(defn gtrr [in a b c]
+  (write in c (b01 (> (reg in a) (reg in b)))))
+
+(defn eqir [in a b c]
+  (write in c (b01 (= a (reg in b)))))
+
+(defn eqri [in a b c]
+  (write in c (b01 (= (reg in a) b))))
+
+(defn eqrr [in a b c]
+  (write in c (b01 (= (reg in a) (reg in b)))))
+
+(def op-names [@"addr" @"addi" @"mulr" @"muli"
+               @"banr" @"bani" @"borr" @"bori"
+               @"setr" @"seti"
+               @"gtir" @"gtri" @"gtrr"
+               @"eqir" @"eqri" @"eqrr"])
+
+(defn str-to-op [name]
+  (let [ind (Array.index-of &op-names name)]
+    (case ind
+      0 addr 1 addi 2 mulr 3 muli
+      4 banr 5 bani 6 borr 7 bori
+      8 setr 9 seti
+      10 gtir 11 gtri 12 gtrr
+      13 eqir 14 eqri 15 eqrr
+      (do
+        (assert false)
+        addr))))
+
+(deftype Inst [op String
+               a Int
+               b Int
+               c Int])
+
+(defn parse [line]
+  (let [parts &(String.words line)]
+    (Inst.init (Array.first parts)
+               (Int.from-string (Array.nth parts 1))
+               (Int.from-string (Array.nth parts 2))
+               (Int.from-string (Array.nth parts 3)))))
+
+(defn run-1 [inst in]
+  (let [f (str-to-op (Inst.op inst))
+        a @(Inst.a inst)
+        b @(Inst.b inst)
+        c @(Inst.c inst)]
+    (f in a b c)))
+
+(defn run [ip-register code init]
+  (let [ip 0
+        input @init]
+    (do
+      (while (not (= ip 28))
+        (do
+          (set! input
+                (run-1 (Array.nth code ip)
+                       &(write &input ip-register ip)))
+          (set! ip (reg &input ip-register))
+          (set! ip (Int.inc ip))
+          (println* ip)
+          (println* &input)
+          ))
+      (println* &input))))
+
+;;;; copypaste ends
+
+(def ip-register 1)
+(def code-lines
+  (Array.subarray
+   &(String.lines &(IO.read-file "../input.21.txt"))
+   1 32))
+
+(def code
+  (Array.copy-map &parse &code-lines))
+
+(defn main []
+  (do
+    ;;(run ip-register &code &[0 0 0 0 0 0])
+    ))

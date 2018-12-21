@@ -1,0 +1,36 @@
+#ip 1
+00 seti 123 0 3 -- r3=123
+01 bani 3 456 3 -- [START] r3=r3&456
+02 eqri 3 72 3  -- r3=(r3==72)
+03 addr 3 1 1   -- jmp +r3 i.e. EQ or NEQ
+04 seti 0 0 1   -- [NEQ] jmp 0 i.e. [START]
+05 seti 0 9 3   -- r3=0
+-- do {
+06 bori 3 65536 5     -- [LOOP] r5=r3|65536, i.e. r3|0x10000
+07 seti 15028787 4 3  -- r3=15028787, i.e. 0xe55233
+--     do {
+08 bani 5 255 2       -- [LOOP2] r2=r5&255 i.e r5&0xff
+09 addr 3 2 3         -- r3+=r2
+10 bani 3 16777215 3  -- r3&=16777215, i.e. 0xffffff
+11 muli 3 65899 3     -- r3*=65899
+12 bani 3 16777215 3  -- r3&=16777215, i.e. 0xffffff
+13 gtir 256 5 2       -- r2=(256>r5)             \
+14 addr 2 1 1         -- jmp +r2, i.e. GE or LT  | if (256>r5) goto END
+15 addi 1 1 1         -- [GE] jmp +1, i.e. CNT   |
+16 seti 27 3 1        -- [LT] jmp 27, i.e. END   /
+17 seti 0 9 2         -- [CNT] r2=0
+18 addi 2 1 4         -- [LOOP3] r4=r2+1        \  r4=(r2+1)*256    \
+19 muli 4 256 4       -- r4*=256                /                   | r4=(r2+1)*256 s.t. r4>r5
+20 gtrr 4 5 4         -- r4=(r4>r5)             \  if (r4>r5) {     | r5=r2
+21 addr 4 1 1         -- jmp +r4, i.e. A or B   |     goto LOOP2    |
+22 addi 1 1 1         -- [A] jmp +1, i.e. CNT2  |  } else {         | i.e. r5=r5/256
+23 seti 25 1 1        -- [B] jmp 25, i.e. CNT3  |     r2++;         |
+24 addi 2 1 2         -- [CNT2] r2++            |     goto LOOP3    /
+25 seti 17 8 1        -- jmp 17, i.e. LOOP3     |  }
+26 setr 2 4 5         -- [CNT3] r5=r2           |
+27 seti 7 3 1         -- jmp 7, i.e. LOOP2      /
+--     } while (TODO);
+-- } while (r3!=r0);
+28 eqrr 3 0 2         -- [END] r2=(r3==r0)          \ 
+29 addr 2 1 1         -- jmp +r2, i.e. LOOP or HALT | if (r3==r0) HALT
+30 seti 5 3 1         -- jmp 5, i.e. LOOP           / else goto LOOP
