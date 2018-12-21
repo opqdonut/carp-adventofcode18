@@ -127,22 +127,31 @@
         ys (Array.copy-map &(fn [c] @(Pair.b c)) &coords)
         min-y (Array.minimum &ys)
         max-y (inc (Array.maximum &ys))
+        nx (fn [x] (* 2 (- x min-x)))
+        ny (fn [y] (* 2 (- y min-y)))
+        pict (Array.replicate (ny max-y) &(Array.replicate (nx max-x) &\#))
+        pict-ref &pict
+        draw (fn [col row c]
+               (Array.aset! (Array.nth pict-ref row)
+                            col
+                            c))
+
         neigh? (fn [c1 c2]
-                 (<= 0 (Array.index-of &(Map.get g c1) c2)))
-        pict (Array.replicate (* 2 (- max-y min-y)) &(Array.replicate (* 2 (- max-x min-x)) &\#))]
+                 (<= 0 (Array.index-of &(Map.get g c1) c2)))]
     (do
       (for [y min-y max-y]
         (for [x min-x max-x]
-          (Array.aset! (Array.nth &pict (* 2 (- y min-y)))
-                       (* 2 (- x min-x))
-                       \.)))
+          (draw (nx x) (ny y) \.)))
       (foreach [c1 &coords]
         (foreach [c2 &(Map.get g c1)]
           (when (neigh? c1 c2)
-            (let [x (- (+ @(Pair.a c1) @(Pair.a c2)) (* 2 min-x))
-                  y (- (+ @(Pair.b c1) @(Pair.b c2)) (* 2 min-y))
-                  row (Array.nth &pict y)]
-             (Array.aset! row x \|)))))
+            (let [x (/ (+ (nx @(Pair.a c1))
+                          (nx @(Pair.a c2)))
+                       2)
+                  y (/ (+ (ny @(Pair.b c1))
+                          (ny @(Pair.b c2)))
+                       2)]
+              (draw x y \|)))))
       (foreach [row &pict]
         (do
           (foreach [ch row]
@@ -182,10 +191,13 @@
           (set! dist (inc dist))))
       (- (Map.length doors) (Set.length &visited)))))
 
+(defn regex-to-doors [regex]
+  @(Pair.a &(walk (Map.create-with-len 100000) [(Pair.init 0 0)] regex 0)))
+
 (defn part12 [regex]
-  (let [doors (Pair.a &(walk (Map.create-with-len 100000) [(Pair.init 0 0)] regex 0))]
+  (let [doors &(regex-to-doors regex)]
     (do
-      ;;(draw-doors doors)
+      (draw-doors doors)
       (println* "DOORS DONE")
       (println* (bfs doors))
       (println* (bfs-count doors 1000)))))
@@ -200,5 +212,6 @@
     ;;(part12 "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN")
     ;;(part12 "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$")
     ;;(part12 "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$")
-    (part12 &input)
+    (draw-doors &(regex-to-doors "ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN"))
+    ;;(part12 &input)
     ))
