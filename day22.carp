@@ -1,0 +1,48 @@
+(defn level [depth idx]
+  (Int.mod (+ depth idx) 20183))
+
+(defn levels [depth w h]
+  (let [cave (Map.create-with-len (* w h))]
+    (do
+      (set! cave (Map.put cave &(Pair.init 0 0) &(level depth 0)))
+      (set! cave (Map.put cave &(Pair.init w h) &(level depth 0)))
+      (for [x 0 (inc w)]
+        (set! cave (Map.put cave &(Pair.init x 0) &(level depth (* x 16807)))))
+      (for [y 0 (inc h)]
+        (set! cave (Map.put cave &(Pair.init 0 y) &(level depth (* y 48271)))))
+      (for [x 1 (inc w)]
+        (for [y 1 (inc h)]
+          (when (not (and (= x w) (= y h)))
+            (let [val (level depth (* (Map.get &cave &(Pair.init (dec x) y))
+                                      (Map.get &cave &(Pair.init x (dec y)))))]
+              (set! cave (Map.put cave &(Pair.init x y) &val))))))
+      cave)))
+
+(defn level-to-type [depth level] (Int.mod level
+           3))
+
+(defn make-cave [depth w h]
+  (Map.endo-map (fn [_k idx] (level-to-type depth @idx))
+                (levels depth w h)))
+
+(defn print-type [t]
+  (case t
+    0 \.
+    1 \=
+    2 \|
+    \x))
+
+(defn print-cave [w h cave]
+  (for [y 0 (inc h)]
+    (do
+      (for [x 0 (inc w)]
+        (print* (print-type (Map.get cave &(Pair.init x y)))))
+      (println* ""))))
+
+(defn part1 []
+  (println* (Array.sum &(Map.vals &(make-cave 3879 8 713)))))
+
+(defn main []
+  (do
+    (print-cave 10 10 &(make-cave 510 10 10))
+    (part1)))
