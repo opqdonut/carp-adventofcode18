@@ -112,7 +112,37 @@
 (def code
   (Array.copy-map &parse &code-lines))
 
+;;;; part2
+
+(defn step [r3-prev]
+  (let [r5 (Int.bit-or r3-prev 65536)
+        r3 15028787]
+    (do
+      (while (> r5 0)
+        (let [r2 (Int.bit-and r5 255)]
+          (do
+            (set! r3 (+ r3 r2))
+            (set! r3 (Int.bit-and r3 16777215))
+            (set! r3 (* r3 65899))
+            (set! r3 (Int.bit-and r3 16777215))
+            (set! r5 (/ r5 256)))))
+      r3)))
+
+(defn steps []
+  (let [prev 0
+        x 0
+        occurred (Set.create-with-len 100000)]
+    (do
+      (while (not (Set.contains? &occurred &x))
+        (do
+          (set! prev x)
+          (set! occurred (Set.put occurred &x))
+          (set! x (step x))))
+      (println* prev))))
+
 (defn main []
   (do
-    ;;(run ip-register &code &[0 0 0 0 0 0])
+    ;;(run 1 &code &[0 0 0 0 0 0])
+    ;;(println* (step 0))
+    (steps)
     ))
