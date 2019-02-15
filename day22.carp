@@ -99,12 +99,6 @@
                                                    (Pair.init x (inc y))]))]
     (Array.push-back moves (switch-search-tool search))))
 
-(sig push-back-all (Fn [(Array a) (Ref (Array a))] (Array a)))
-(defn push-back-all [arr elts]
-  (Array.reduce &(fn [arr el] (Array.push-back arr @el))
-                arr
-                elts))
-
 (deftype State [pos (Pair Int Int)
                 tool Int])
 
@@ -122,7 +116,7 @@
         times (Map.create-with-len (Map.length cave))]
     (do
       (while true
-        (let [cur (Array.pop-back! &queue)
+        (let [cur (Heap.pop! &queue &<time)
               cur-pos (Search.pos &cur)
               cur-time (Search.time &cur)
               cur-tool (Search.tool &cur)
@@ -136,8 +130,9 @@
               (set! times (Map.put times cur-state cur-time))
               (when (= cur-state target)
                 (break))
-              (set! queue (Array.sort-by (push-back-all queue &(neighbours cave &cur))
-                                         &<time))))))
+              (let [new (neighbours cave &cur)]
+                (foreach [n &new]
+                  (Heap.push! &queue @n <time)))))))
       ;;(println* &queue)
       (Map.get &times target))))
 
@@ -156,5 +151,5 @@
   (do
     ;;(part1)
     (example-part2)
-    ;;(part2)
+    (part2)
     ))
