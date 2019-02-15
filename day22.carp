@@ -18,8 +18,8 @@
               (set! cave (Map.put cave &(Pair.init x y) &val))))))
       cave)))
 
-(defn level-to-type [depth level] (Int.mod level
-           3))
+(defn level-to-type [depth level]
+  (Int.mod level 3))
 
 (defn make-cave [depth w h]
   (Map.endo-map (fn [_k idx] (level-to-type depth @idx))
@@ -42,7 +42,127 @@
 (defn part1 []
   (println* (Array.sum &(Map.vals &(make-cave 3879 8 713)))))
 
+;;; part2
+
+;; tools are
+;; 0 - neither
+;; 1 - torch
+;; 2 - climbing gear
+
+(defn allowed? [tool terrain]
+  (not (= tool terrain)))
+
+(defn switch-tool [tool terrain]
+  (let [new-tool (Int.mod (Int.inc tool) 3)]
+    (if (allowed? new-tool terrain)
+      new-tool
+      (Int.mod (Int.inc new-tool) 3))))
+
+(deftype Search [time Int
+                 pos (Pair Int Int)
+                 terrain Int
+                 tool Int])
+
+(defn <time [s-a s-b]
+  (< @(Search.time s-a)
+     @(Search.time s-b)))
+
+(defn move-to [search new-terrain new-pos]
+  (let [time @(Search.time search)
+        terrain @(Search.terrain search)
+        tool @(Search.tool search)]
+    (if (allowed? tool new-terrain)
+      (Search.init (+ 1 time) @new-pos new-terrain tool)
+      (Search.init (+ 8 time) @new-pos new-terrain (switch-tool tool terrain)))))
+
+(defn neighbours [cave search]
+  (let [pos (Search.pos search)
+        x @(Pair.a pos)
+        y @(Pair.b pos)]
+    (Array.copy-map &(fn [p] (move-to search (Map.get cave p) p))
+                    &(Array.endo-filter &(fn [p] (and (and (>= @(Pair.a p) 0)
+                                                           (>= @(Pair.b p) 0))
+                                                      (Map.contains? cave p)))
+                                        [(Pair.init (dec x) y)
+                                         (Pair.init (inc x) y)
+                                         (Pair.init x (dec y))
+                                         (Pair.init x (inc y))]))))
+
+(sig push-back-all (Fn [(Array a) (Ref (Array a))] (Array a)))
+(defn push-back-all [arr elts]
+  (Array.reduce &(fn [arr el] (Array.push-back arr @el))
+                arr
+                elts))
+
+(defn bfs [cave target]
+  (let [init (Search.init 0 (Pair.init 0 0) (Map.get cave &(Pair.init 0 0)) 1)
+        state [init]
+        times (Map.create-with-len (Map.length cave))]
+    (do
+      (while true
+        (let [cur (Array.pop-back! &state)
+              cur-pos (Search.pos &cur)
+              cur-time (Search.time &cur)
+              int-max Int.MAX
+              prev (Map.get-with-default &times cur-pos &int-max)]
+          (when (< @cur-time prev)
+            (do
+              (print* "CUR: ")
+              (println* &cur)
+              (set! times (Map.put times cur-pos cur-time))
+              (when (= cur-pos target)
+                (break))
+              (set! state (Array.sort-by (push-back-all state &(neighbours cave &cur))
+                                         &<time))))))
+      (Map.get &times target))))
+
+;;; main
+
 (defn main []
-  (do
-    (print-cave 10 10 &(make-cave 510 10 10))
-    (part1)))
+  (let [example-cave (make-cave 510 20 20)]
+    (do
+      ;;(part1)
+      (print-cave 20 20 &example-cave)
+      (println* &(neighbours &example-cave &(Search.init 0
+                                                         (Pair.init 0 0)
+                                                         (Map.get &example-cave &(Pair.init 0 0))
+                                                         1)))
+      (println* (bfs &example-cave &(Pair.init 10 10))))))
+
+;; 0 0,0
+;; 1 0,1
+;; 2 1,1
+;; 10 2,1
+;; 11 3,1
+;; 12 4,1
+;; 20 4,2
+;; 21 4,3
+;; CUR: (Search 0 (Pair 0 0) 0 1)
+;; CUR: (Search 1 (Pair 0 1) 0 1)
+;; CUR: (Search 2 (Pair 1 1) 2 1)
+;; CUR: (Search 2 (Pair 0 2) 0 1)
+;; CUR: (Search 8 (Pair 1 0) 1 2)
+;; CUR: (Search 9 (Pair 2 0) 0 2)
+;; CUR: (Search 10 (Pair 1 2) 1 0)
+;; CUR: (Search 10 (Pair 2 1) 1 0)
+;; CUR: (Search 10 (Pair 0 3) 1 2)
+;; CUR: (Search 11 (Pair 2 2) 1 0)
+;; CUR: (Search 11 (Pair 3 1) 2 0)
+;; CUR: (Search 11 (Pair 0 4) 1 2)
+;; CUR: (Search 11 (Pair 1 3) 0 2)
+;; CUR: (Search 12 (Pair 0 5) 1 2)
+;; CUR: (Search 12 (Pair 2 3) 2 0)
+;; CUR: (Search 12 (Pair 4 1) 1 0)
+;; CUR: (Search 12 (Pair 3 2) 2 0)
+;; CUR: (Search 12 (Pair 3 0) 2 0)
+;; CUR: (Search 13 (Pair 4 0) 1 0)
+;; CUR: (Search 13 (Pair 5 1) 2 0)
+;; CUR: (Search 14 (Pair 6 1) 2 0)
+;; CUR: (Search 15 (Pair 7 1) 2 0)
+;; CUR: (Search 15 (Pair 6 0) 2 0)
+;; CUR: (Search 19 (Pair 1 4) 2 0)
+;; CUR: (Search 20 (Pair 3 3) 0 1)
+;; CUR: (Search 20 (Pair 0 6) 2 0)
+;; CUR: (Search 20 (Pair 4 2) 0 2)
+;; CUR: (Search 20 (Pair 1 5) 2 0)
+;; CUR: (Search 20 (Pair 2 4) 0 1)
