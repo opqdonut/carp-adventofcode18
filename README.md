@@ -29,3 +29,4 @@ Carp issues & PRs made during development:
 - PR: https://github.com/carp-lang/Carp/pull/367
 - PR: https://github.com/carp-lang/Carp/pull/368
 - PR: https://github.com/carp-lang/Carp/pull/369
+- https://github.com/carp-lang/Carp/issues/381
